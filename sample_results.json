@@ -1,0 +1,87 @@
+{
+  "filteredListings": [
+    {
+      "id": "5",
+      "name": "Luxury Suite",
+      "host_id": "102",
+      "host_name": "Jane Smith",
+      "neighbourhood_group": "Manhattan",
+      "neighbourhood": "Upper East Side",
+      "latitude": 40.7736,
+      "longitude": -73.9566,
+      "room_type": "Entire home/apt",
+      "price": 450,
+      "minimum_nights": 2,
+      "number_of_reviews": 30,
+      "last_review": "2022-10-01",
+      "reviews_per_month": 3,
+      "calculated_host_listings_count": 3,
+      "availability_365": 270,
+      "number_of_reviews_ltm": 2,
+      "license": "4.9"
+    },
+    {
+      "id": "7",
+      "name": "Modern Loft",
+      "host_id": "105",
+      "host_name": "Michael Brown",
+      "neighbourhood_group": "Manhattan",
+      "neighbourhood": "SoHo",
+      "latitude": 40.7248,
+      "longitude": -74.0018,
+      "room_type": "Entire home/apt",
+      "price": 350,
+      "minimum_nights": 3,
+      "number_of_reviews": 22,
+      "last_review": "2022-10-12",
+      "reviews_per_month": 2.5,
+      "calculated_host_listings_count": 1,
+      "availability_365": 200,
+      "number_of_reviews_ltm": 2,
+      "license": "4.8"
+    },
+    {
+      "id": "9",
+      "name": "Skyline View Studio",
+      "host_id": "106",
+      "host_name": "Lisa Garcia",
+      "neighbourhood_group": "Manhattan",
+      "neighbourhood": "Financial District",
+      "latitude": 40.7077,
+      "longitude": -74.0116,
+      "room_type": "Entire home/apt",
+      "price": 220,
+      "minimum_nights": 2,
+      "number_of_reviews": 28,
+      "last_review": "2022-10-05",
+      "reviews_per_month": 3.1,
+      "calculated_host_listings_count": 1,
+      "availability_365": 290,
+      "number_of_reviews_ltm": 1,
+      "license": "4.6"
+    }
+  ],
+  "statistics": {
+    "count": 3,
+    "averagePricePerRoom": {
+      "Entire home/apt": 340
+    }
+  },
+  "hostRankings": [
+    {
+      "host_id": "102",
+      "host_name": "Jane Smith",
+      "listingCount": 1
+    },
+    {
+      "host_id": "105",
+      "host_name": "Michael Brown",
+      "listingCount": 1
+    },
+    {
+      "host_id": "106",
+      "host_name": "Lisa Garcia",
+      "listingCount": 1
+    }
+  ]
+}
