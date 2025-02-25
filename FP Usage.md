@@ -12,7 +12,7 @@ Pure functions are functions that:
 - Have no side effects
 - Don't modify external state
 
-**Example from our codebase:**
+**Example from the codebase:**
 
 ```typescript
 // Pure function from airbnb-data-handler.ts
@@ -59,7 +59,7 @@ High-order functions are functions that:
 - Take one or more functions as arguments
 - Return a function as a result
 
-**Example from our codebase:**
+**Example from the codebase:**
 
 ```typescript
 // Using high-order functions like filter, map, and reduce in airbnb-data-handler.ts
@@ -93,7 +93,7 @@ state.hostRankings = Object.entries(hostCounts)
 
 Function composition enables creating new functions by combining existing ones.
 
-**Example from our codebase:**
+**Example from the codebase:**
 
 ```typescript
 // Method chaining in airbnb-data-handler.ts
@@ -128,7 +128,7 @@ dataHandler
 
 Immutability means that once a data structure is created, it cannot be changed.
 
-**Example from our codebase:**
+**Example from the codebase:**
 
 ```typescript
 // Getter functions return copies rather than references to internal state
@@ -388,9 +388,9 @@ The counter-examples demonstrate practices that break functional programming pri
 - Relying on classes and inheritance instead of function composition
 - Mixing concerns that should be separate
 
-By avoiding these anti-patterns, our actual implementation remains true to functional programming paradigms, resulting in code that is more predictable, testable, and maintainable.
+By avoiding these anti-patterns, the actual implementation remains true to functional programming paradigms, resulting in code that is more predictable, testable, and maintainable.
 
-Our codebase demonstrates the power of functional programming through:
+The codebase demonstrates the power of functional programming through:
 
 1. Method chaining that allows operations to be composed seamlessly
 2. Immutable data structures that prevent unexpected side effects
