@@ -94,8 +94,18 @@ const runTests = async () => {
     console.log("Host rankings:", JSON.stringify(dataHandler.getHostRankings(), null, 2));
 
     // Test exporting results
-    console.log("\nExporting results...");
-    await dataHandler.exportResults("./sample_results.json");
+    console.log("\nExporting results as JSON...");
+    const filterCriteria = {
+      minPrice: 200,
+      minReviews: 20,
+      roomType: "Entire home/apt",
+      maxMinimumNights: 3
+    };
+    await dataHandler.exportResults("./sample_results.json", "json", filterCriteria);
+
+    // Test CSV export
+    console.log("\nExporting results as CSV...");
+    await dataHandler.exportResults("./sample_results.csv", "csv", filterCriteria);
   } catch (error) {
     console.error("Test failed:", error);
   }

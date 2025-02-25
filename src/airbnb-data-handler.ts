@@ -27,7 +27,8 @@ export const createAirBnBDataHandler = async (filePath: string) => {
     allListings: [],
     filteredListings: [],
     statistics: null,
-    hostRankings: null
+    hostRankings: null,
+    lastAppliedFilters: null
   };
 
   /**
@@ -171,6 +172,9 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       return true;
     });
 
+    // Store the applied filters (make a copy to avoid external mutation)
+    state.lastAppliedFilters = { ...criteria };
+
     // Reset statistics and rankings when filtering
     state.statistics = null;
     state.hostRankings = null;
@@ -252,26 +256,170 @@ export const createAirBnBDataHandler = async (filePath: string) => {
   };
 
   /**
-   * Exports the current results to a JSON file
+   * Exports the current results to a file in the specified format
    *
    * @param {string} outputPath - Path to the output file
+   * @param {string} format - Format of the output file ('json' or 'csv')
+   * @param {FilterCriteria | null} appliedFilters - The filters that were applied to the data
    * @returns {Promise<void>} A promise that resolves when export is complete
    * @throws {Error} If the results could not be exported to the specified file
    */
-  const exportResults = async (outputPath: string): Promise<void> => {
+  const exportResults = async (
+    outputPath: string,
+    format: "json" | "csv" = "json",
+    appliedFilters: FilterCriteria | null = null
+  ): Promise<void> => {
     try {
+      // Create exports directory if it doesn't exist
+      const fs = await import("fs");
+      const path = await import("path");
+      const exportsDir = "exports";
+
+      // Using fs.promises API for async file operations
+      if (!fs.existsSync(exportsDir)) {
+        fs.mkdirSync(exportsDir, { recursive: true });
+      }
+
+      // Construct full path in exports directory
+      const fileName = path.basename(outputPath);
+      const exportPath = path.join(exportsDir, fileName);
+
+      // Prepare the data for export
       const results = {
         filteredListings: state.filteredListings,
         statistics: state.statistics,
         hostRankings: state.hostRankings
       };
 
-      await writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
-      console.log(`Results exported to ${outputPath}`);
+      // Export in the specified format
+      if (format === "json") {
+        await exportAsJson(exportPath, results);
+      } else if (format === "csv") {
+        await exportAsCsv(exportPath, state.filteredListings);
+      } else {
+        throw new Error(`Unsupported export format: ${format}`);
+      }
+
+      // Create description file with applied filters, passing the format
+      await createFilterDescriptionFile(exportPath, appliedFilters, format);
+
+      // No logging here, handled by CLI
     } catch (error) {
       console.error("Error exporting results:", error);
       throw new Error(`Failed to export results to ${outputPath}`);
     }
+  };
+
+  /**
+   * Exports data as JSON
+   *
+   * @param {string} filePath - Path to the output file
+   * @param {Record<string, unknown>} data - Data to export
+   * @returns {Promise<void>} A promise that resolves when export is complete
+   * @private
+   */
+  const exportAsJson = async (filePath: string, data: Record<string, unknown>): Promise<void> => {
+    await writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+  };
+
+  /**
+   * Exports listings as CSV
+   *
+   * @param {string} filePath - Path to the output file
+   * @param {Listing[]} listings - Listings to export
+   * @returns {Promise<void>} A promise that resolves when export is complete
+   * @private
+   */
+  const exportAsCsv = async (filePath: string, listings: Listing[]): Promise<void> => {
+    if (listings.length === 0) {
+      await writeFile(filePath, "", "utf-8");
+      return;
+    }
+
+    // Get headers from the first listing
+    const headers = Object.keys(listings[0]);
+
+    // Convert listings to CSV rows
+    const rows = listings.map((listing) => {
+      return headers
+        .map((header) => {
+          const value = listing[header as keyof Listing];
+          // Handle special cases for CSV formatting
+          if (value === null || value === undefined) {
+            return "";
+          }
+          // These rules being disabled are necessary in this case because this was giving me too many headaches
+          // eslint-disable-next-line quotes
+          if (typeof value === "string" && (value.includes(",") || value.includes('"'))) {
+            // Escape quotes and wrap in quotes if the string contains commas or quotes
+            // eslint-disable-next-line quotes
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return String(value);
+        })
+        .join(",");
+    });
+
+    // Combine headers and rows
+    const csvContent = [headers.join(","), ...rows].join("\n");
+
+    await writeFile(filePath, csvContent, "utf-8");
+  };
+
+  /**
+   * Creates a description file listing all applied filters
+   *
+   * @param {string} exportPath - Path to the exported data file
+   * @param {FilterCriteria | null} filters - The filters that were applied
+   * @param {string} format - Format of the exported data
+   * @returns {Promise<void>} A promise that resolves when the file is created
+   * @private
+   */
+  const createFilterDescriptionFile = async (
+    exportPath: string,
+    filters: FilterCriteria | null,
+    format: string
+  ): Promise<void> => {
+    const path = await import("path");
+
+    // Generate the description file path by adding format indicator and changing the extension to .txt
+    let descriptionFileName = `${path.basename(exportPath, path.extname(exportPath))}_filters.txt`;
+
+    // If format is CSV, add _csv to the filename
+    if (format === "csv") {
+      descriptionFileName = `${path.basename(exportPath, path.extname(exportPath))}_csv_filters.txt`;
+    }
+
+    const descriptionPath = path.join(path.dirname(exportPath), descriptionFileName);
+
+    // Generate filter description content
+    let content = "Applied Filters:\n\n";
+
+    if (!filters || Object.keys(filters).length === 0) {
+      content += "No filters were applied. All listings are included.\n";
+    } else {
+      // Add each filter to the description
+      Object.entries(filters).forEach(([key, value]) => {
+        // Format the filter key for better readability
+        let formattedKey = key
+          .replace(/([A-Z])/g, " $1") // Add spaces before capital letters
+          .replace(/^./, (str) => str.toUpperCase()); // Capitalize first letter
+
+        // Special case handling for min/max prefixes
+        formattedKey = formattedKey.replace(/Min /, "Minimum ").replace(/Max /, "Maximum ");
+
+        // Special case for "minimum nights" to avoid redundancy
+        if (key === "minMinimumNights") {
+          formattedKey = "Minimum Nights";
+        } else if (key === "maxMinimumNights") {
+          formattedKey = "Maximum Nights";
+        }
+
+        content += `${formattedKey}: ${value}\n`;
+      });
+    }
+
+    await writeFile(descriptionPath, content, "utf-8");
   };
 
   /**
@@ -311,6 +459,15 @@ export const createAirBnBDataHandler = async (filePath: string) => {
   };
 
   /**
+   * Gets the last applied filters
+   *
+   * @returns {FilterCriteria | null} A copy of the last applied filters or null if no filters applied
+   */
+  const getLastAppliedFilters = (): FilterCriteria | null => {
+    return state.lastAppliedFilters ? { ...state.lastAppliedFilters } : null;
+  };
+
+  /**
    * The AirBnBDataHandler object with all the methods for data manipulation
    *
    * @type {AirBnBDataHandler}
@@ -323,7 +480,8 @@ export const createAirBnBDataHandler = async (filePath: string) => {
     getFilteredListings,
     getStatistics,
     getHostRankings,
-    getTotalListingsCount
+    getTotalListingsCount,
+    getLastAppliedFilters
   };
 
   return handler;

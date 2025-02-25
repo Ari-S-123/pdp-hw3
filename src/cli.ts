@@ -8,7 +8,7 @@
  */
 
 import * as readline from "readline/promises";
-import type { AirBnBDataHandler, Listing, HostRanking } from "./types/index";
+import type { AirBnBDataHandler, Listing, HostRanking, FilterCriteria } from "./types/index";
 
 /**
  * Creates a CLI interface for interacting with the AirBnBDataHandler
@@ -229,7 +229,7 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
 
   /**
    * Handles the export operation
-   * Prompts the user for a file path and exports the current results
+   * Prompts the user for a file path and export format, then exports the current results
    *
    * @param {readline.Interface} rl - The readline interface for user input
    * @returns {Promise<void>} A promise that resolves when the export is complete
@@ -237,18 +237,62 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
   const handleExport = async (rl: readline.Interface): Promise<void> => {
     console.log("\n=== EXPORT RESULTS ===");
 
-    const outputPath = await rl.question("Enter the output file path: ");
+    // Get output file path
+    const outputPath = await rl.question("Enter the output file name (without extension): ");
     if (!outputPath) {
       console.log("Export cancelled.");
       return;
     }
 
+    // Get export format
+    console.log("\nChoose export format:");
+    console.log("1. JSON (includes listings, statistics, and host rankings)");
+    console.log("2. CSV (includes only listings)");
+
+    const formatChoice = await rl.question("Enter your choice (1-2): ");
+    let format: "json" | "csv";
+
+    // Determine format based on user choice
+    switch (formatChoice) {
+      case "1":
+        format = "json";
+        break;
+      case "2":
+        format = "csv";
+        break;
+      default:
+        console.log("Invalid choice. Defaulting to JSON format.");
+        format = "json";
+    }
+
+    // Add appropriate extension if not already present
+    const fileNameWithExt = outputPath.endsWith(`.${format}`) ? outputPath : `${outputPath}.${format}`;
+
     try {
-      await dataHandler.exportResults(outputPath);
-      console.log(`Results successfully exported to ${outputPath}`);
+      // Pass the current filters to exportResults
+      // We need to get the filters that were last applied
+      const currentFilters = getCurrentFilters();
+
+      // Call exportResults with the format and filters
+      await dataHandler.exportResults(fileNameWithExt, format, currentFilters);
+      console.log(`\nResults successfully exported to exports/${fileNameWithExt}`);
+
+      // Display the correct filter description file name based on format
+      const filtersSuffix = format === "csv" ? "_csv_filters.txt" : "_filters.txt";
+      console.log(`A description of applied filters has been saved to exports/${outputPath}${filtersSuffix}`);
     } catch (error) {
       console.error("Export failed:", error);
     }
+  };
+
+  /**
+   * Gets the currently applied filters
+   *
+   * @returns {FilterCriteria | null} The currently applied filters or null if no filters applied
+   */
+  const getCurrentFilters = (): FilterCriteria | null => {
+    // Now we can directly get the last applied filters from the data handler
+    return dataHandler.getLastAppliedFilters();
   };
 
   /**
