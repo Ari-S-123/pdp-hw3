@@ -15,51 +15,51 @@ Pure functions are functions that:
 **Example from the codebase:**
 
 ```typescript
-// Pure data transformation function from airbnb-data-handler.ts in the loadData method
-// This is the transformation used in the "on data" event handler that converts
-// a CSV row into a strongly-typed Listing object without side effects
-const createListing = (row: any): Listing => {
-  // Clean price value - remove $ and any non-numeric characters except decimal point
-  const priceStr = row.price ? row.price.replace(/[$,]/g, "") : "0";
-  const price = parseFloat(priceStr);
-
-  // Parse reviews_per_month, but preserve empty values
-  let reviewsPerMonth: number | null = null;
-  if (row.reviews_per_month && row.reviews_per_month.trim() !== "") {
-    reviewsPerMonth = parseFloat(row.reviews_per_month);
-    if (isNaN(reviewsPerMonth)) {
-      reviewsPerMonth = 0;
-    }
-  }
+// From CLI module - a pure function for pagination calculations
+const calculatePagination = (totalItems: number, pageSize: number, currentPage: number) => {
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const normalizedPage = Math.max(1, Math.min(currentPage, totalPages));
+  const startIndex = (normalizedPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
 
   return {
-    id: row.id || "",
-    name: row.name || "",
-    host_id: row.host_id || "",
-    host_name: row.host_name || "",
-    neighbourhood_group: row.neighbourhood_group || "",
-    neighbourhood: row.neighbourhood || "",
-    latitude: parseFloat(row.latitude || "0"),
-    longitude: parseFloat(row.longitude || "0"),
-    room_type: row.room_type || "",
-    price: isNaN(price) ? 0 : price, // Default to 0 if price is NaN
-    minimum_nights: parseInt(row.minimum_nights || "0"),
-    number_of_reviews: parseInt(row.number_of_reviews || "0"),
-    last_review: row.last_review || "",
-    reviews_per_month: reviewsPerMonth,
-    calculated_host_listings_count: parseInt(row.calculated_host_listings_count || "0"),
-    availability_365: parseInt(row.availability_365 || "0"),
-    number_of_reviews_ltm: parseInt(row.number_of_reviews_ltm || "0"),
-    license: row.license || ""
+    totalPages,
+    currentPage: normalizedPage,
+    startIndex,
+    endIndex,
+    hasPrevPage: normalizedPage > 1,
+    hasNextPage: normalizedPage < totalPages
   };
 };
 ```
 
 This function is pure because:
 
-- It always returns the same output for the same input row object
+- It always returns the same output for the same input parameters
 - It doesn't modify any state outside its scope
-- It has no side effects
+- It has no side effects - it only computes and returns a new value
+
+Another pure function example:
+
+```typescript
+// Pure function to format listings in the CLI module
+const formatListing = (listing: Listing, index: number): string => {
+  // Format price as currency with 2 decimal places
+  const formattedPrice = isNaN(listing.price) ? "N/A" : `$${listing.price.toFixed(2)}`;
+
+  return [
+    `\n${index}. ${listing.name} (ID: ${listing.id})`,
+    `   Host: ${listing.host_name} (ID: ${listing.host_id})`,
+    `   Price: ${formattedPrice}`,
+    `   Room type: ${listing.room_type}`,
+    `   Location: ${listing.neighbourhood}`,
+    `   Minimum nights: ${listing.minimum_nights}`,
+    `   Reviews: ${listing.number_of_reviews}`,
+    `   Reviews in last 12 months: ${listing.number_of_reviews_ltm}`,
+    `   Availability (days/year): ${listing.availability_365}`
+  ].join("\n");
+};
+```
 
 ### 2. High-Order Functions
 
@@ -75,11 +75,31 @@ High-order functions are functions that:
 
 // When filtering listings:
 state.filteredListings = state.allListings.filter((listing) => {
-  // Filter logic...
+  // Filter by price
   if (criteria.minPrice !== undefined && listing.price < criteria.minPrice) {
     return false;
   }
-  // More filter conditions...
+  if (criteria.maxPrice !== undefined && listing.price > criteria.maxPrice) {
+    return false;
+  }
+
+  // Filter by number of reviews
+  if (criteria.minReviews !== undefined && listing.number_of_reviews < criteria.minReviews) {
+    return false;
+  }
+  if (criteria.maxReviews !== undefined && listing.number_of_reviews > criteria.maxReviews) {
+    return false;
+  }
+
+  // Filter by number of reviews in last 12 months
+  if (criteria.minReviewsLtm !== undefined && listing.number_of_reviews_ltm < criteria.minReviewsLtm) {
+    return false;
+  }
+  if (criteria.maxReviewsLtm !== undefined && listing.number_of_reviews_ltm > criteria.maxReviewsLtm) {
+    return false;
+  }
+
+  // More conditions...
   return true;
 });
 
@@ -129,16 +149,26 @@ const filter = (criteria: FilterCriteria) => {
   return handler; // Return handler for method chaining
 };
 
-// Usage example (possible usage pattern):
-dataHandler
-  .filter({
-    minPrice: 200,
-    minReviews: 20,
-    roomType: "Entire home/apt",
-    maxMinimumNights: 3
-  })
-  .computeStats()
-  .computeHostRankings();
+// From test.ts - example of actual method chaining used in the codebase
+console.log(
+  "Filtering listings with price >= 200, reviews >= 20, room type 'Entire home/apt', and maximum minimum nights of 3..."
+);
+dataHandler.filter({
+  minPrice: 200,
+  minReviews: 20,
+  roomType: "Entire home/apt",
+  maxMinimumNights: 3
+});
+console.log(`Filtered listings: ${dataHandler.getFilteredListings().length}`);
+
+// Test computing statistics
+console.log("\nComputing statistics...");
+dataHandler.computeStats();
+console.log("Statistics:", JSON.stringify(dataHandler.getStatistics(), null, 2));
+
+// Test host rankings
+console.log("\nComputing host rankings...");
+dataHandler.computeHostRankings();
 ```
 
 ### 4. Immutability
@@ -163,6 +193,10 @@ const getHostRankings = (): HostRanking[] | null => {
   return state.hostRankings ? [...state.hostRankings] : null; // Return a copy of the array
 };
 
+const getLastAppliedFilters = (): FilterCriteria | null => {
+  return state.lastAppliedFilters ? { ...state.lastAppliedFilters } : null; // Return a copy
+};
+
 // When setting applied filters, we make a copy to avoid external mutation
 state.lastAppliedFilters = { ...criteria };
 ```
@@ -176,54 +210,69 @@ A non-functional approach would directly modify external state, causing side eff
 ```typescript
 // BAD EXAMPLE - DO NOT USE
 // This breaks purity by mutating external state
-let globalListings: Listing[] = [];
+// Compare with the pure calculatePagination function
 
-const badFilter = (criteria: FilterCriteria) => {
-  for (let i = 0; i < globalListings.length; i++) {
-    const listing = globalListings[i];
+let currentPage = 1; // Global state
+let listings = []; // More global state
 
-    // Direct mutation of the array during iteration
-    if (criteria.minPrice !== undefined && listing.price < criteria.minPrice) {
-      globalListings.splice(i, 1);
-      i--; // Adjust index after removal
-    } else if (criteria.name !== undefined && !listing.name.toLowerCase().includes(criteria.name.toLowerCase())) {
-      globalListings.splice(i, 1);
-      i--;
-    }
-    // More conditions with similar mutations...
-  }
+const impureCalculatePagination = (totalItems: number, pageSize: number) => {
+  // Using and modifying external state
+  if (currentPage < 1) currentPage = 1;
 
-  // No return value for chaining
+  // Modify global state as a side effect
+  const totalPages = Math.ceil(totalItems / pageSize);
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  // Log as a side effect
+  console.log(`Showing page ${currentPage} of ${totalPages}`);
+
+  // Modify the global listings array as a side effect
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+  // Return value that depends on global state
+  return {
+    currentPage, // Uses external state
+    startIndex,
+    endIndex
+  };
 };
+
+// Usage would involve modifying global state:
+// currentPage = 3; // Set the global page
+// const pagination = impureCalculatePagination(100, 10);
 ```
 
-### 2. Impure CSV Parsing (Alternative to the createListing example)
+### 2. Impure Formatting Function (Alternative to formatListing)
 
 ```typescript
 // BAD EXAMPLE - DO NOT USE
 // This breaks purity by using global state and causing side effects
-let lastParsedRow: any = null; // Global state
-let totalRowsProcessed = 0; // Another piece of global state
+// Compare with the pure formatListing function
 
-const impureCreateListing = (row: any): Listing => {
+let formattedListings = []; // Global state to store formatted listings
+let formattingOptions = { showPrice: true, showReviews: true }; // Global configuration
+
+const impureFormatListing = (listing: Listing, index: number): string => {
   // Side effect: logging
-  console.log(`Parsing row: ${JSON.stringify(row).substring(0, 50)}...`);
+  console.log(`Formatting listing: ${listing.id}`);
 
-  // Side effect: mutating external state
-  lastParsedRow = row;
-  totalRowsProcessed++;
+  // Using global state to determine output
+  const formattedPrice = formattingOptions.showPrice
+    ? isNaN(listing.price)
+      ? "N/A"
+      : `$${listing.price.toFixed(2)}`
+    : "Price hidden";
 
-  // Direct side effect: writing to file system
-  require("fs").appendFileSync("parsing-log.txt", `Parsed row at ${new Date()}: ${JSON.stringify(row)}\n`);
+  const output = `\n${index}. ${listing.name} (ID: ${listing.id})
+   Host: ${listing.host_name} (ID: ${listing.host_id})
+   Price: ${formattedPrice}`;
 
-  // Rest of parsing logic similar to before
-  // ...
+  // Side effect: modifying global state
+  formattedListings.push(output);
 
-  return {
-    id: row.id || "",
-    name: row.name || ""
-    // ...other fields
-  };
+  // Return value, but also had side effects
+  return output;
 };
 ```
 
@@ -234,35 +283,47 @@ const impureCreateListing = (row: any): Listing => {
 // Using loops and mutations instead of higher-order functions
 
 // Instead of using filter for filtering listings:
-const badFilter = (criteria: FilterCriteria) => {
-  const results = [];
+const badFilter = (allListings: Listing[], criteria: FilterCriteria) => {
+  const filteredListings = [];
 
-  // Mutable approach with loops
-  for (let i = 0; i < state.allListings.length; i++) {
-    const listing = state.allListings[i];
-    let includeItem = true;
+  // Imperative approach with loops
+  for (let i = 0; i < allListings.length; i++) {
+    const listing = allListings[i];
+    let shouldInclude = true;
 
+    // Price filter checks
     if (criteria.minPrice !== undefined && listing.price < criteria.minPrice) {
-      includeItem = false;
+      shouldInclude = false;
     }
-    // Check other criteria...
 
-    if (includeItem) {
-      results.push(listing);
+    if (shouldInclude && criteria.maxPrice !== undefined && listing.price > criteria.maxPrice) {
+      shouldInclude = false;
+    }
+
+    // Review count checks
+    if (shouldInclude && criteria.minReviews !== undefined && listing.number_of_reviews < criteria.minReviews) {
+      shouldInclude = false;
+    }
+
+    // Add more conditions...
+
+    if (shouldInclude) {
+      filteredListings.push(listing);
     }
   }
 
-  state.filteredListings = results;
-  // No return for chaining
+  return filteredListings;
 };
 
 // Instead of using reduce and method chains for host rankings:
-const badComputeHostRankings = (): void => {
+const badComputeHostRankings = (
+  listings: Listing[]
+): Array<{ host_id: string; host_name: string; listingCount: number }> => {
   const hostCounts = {};
 
   // Manual loop instead of reduce
-  for (let i = 0; i < state.filteredListings.length; i++) {
-    const listing = state.filteredListings[i];
+  for (let i = 0; i < listings.length; i++) {
+    const listing = listings[i];
     if (!hostCounts[listing.host_id]) {
       hostCounts[listing.host_id] = {
         count: 0,
@@ -273,9 +334,9 @@ const badComputeHostRankings = (): void => {
   }
 
   // Manual array creation instead of map
-  state.hostRankings = [];
+  const rankings = [];
   for (const hostId in hostCounts) {
-    state.hostRankings.push({
+    rankings.push({
       host_id: hostId,
       host_name: hostCounts[hostId].name,
       listingCount: hostCounts[hostId].count
@@ -283,15 +344,17 @@ const badComputeHostRankings = (): void => {
   }
 
   // Manual sorting instead of sort method
-  for (let i = 0; i < state.hostRankings.length; i++) {
-    for (let j = i + 1; j < state.hostRankings.length; j++) {
-      if (state.hostRankings[i].listingCount < state.hostRankings[j].listingCount) {
-        const temp = state.hostRankings[i];
-        state.hostRankings[i] = state.hostRankings[j];
-        state.hostRankings[j] = temp;
+  for (let i = 0; i < rankings.length; i++) {
+    for (let j = i + 1; j < rankings.length; j++) {
+      if (rankings[i].listingCount < rankings[j].listingCount) {
+        const temp = rankings[i];
+        rankings[i] = rankings[j];
+        rankings[j] = temp;
       }
     }
   }
+
+  return rankings;
 };
 ```
 
@@ -302,7 +365,7 @@ const badComputeHostRankings = (): void => {
 // Breaking method chaining with procedural approach
 
 class AirBnBProcessor {
-  private listings: Listing[] = [];
+  private allListings: Listing[] = [];
   private filteredListings: Listing[] = [];
   private statistics: Statistics | null = null;
   private rankings: HostRanking[] | null = null;
@@ -312,7 +375,7 @@ class AirBnBProcessor {
   }
 
   filter(criteria: FilterCriteria): void {
-    this.filteredListings = this.listings.filter(/* filter logic */);
+    this.filteredListings = this.allListings.filter(/* filter logic */);
     // No return value for chaining
   }
 
@@ -326,7 +389,7 @@ class AirBnBProcessor {
     // No return value for chaining
   }
 
-  // Procedural usage:
+  // Procedural usage (compare with the fluent method chaining in test.ts):
   // const processor = new AirBnBProcessor("file.csv");
   // processor.filter({ minPrice: 200 });
   // processor.computeStats();
@@ -352,9 +415,18 @@ const badGetHostRankings = (): HostRanking[] | null => {
   return state.hostRankings; // Returning direct reference, not a copy
 };
 
+const badGetLastAppliedFilters = (): FilterCriteria | null => {
+  return state.lastAppliedFilters; // Returning direct reference, not a copy
+};
+
 // This would allow the caller to mutate internal state directly:
 // const listings = badGetFilteredListings();
 // listings.pop(); // This would modify state.filteredListings!
+//
+// const stats = badGetStatistics();
+// if (stats) {
+//   stats.count = 0; // This would modify state.statistics!
+// }
 ```
 
 ## Conclusion
