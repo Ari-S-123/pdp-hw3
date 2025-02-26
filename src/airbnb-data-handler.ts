@@ -8,6 +8,8 @@
  */
 
 import { readFile, writeFile } from "fs/promises";
+import { existsSync, mkdirSync } from "fs";
+import { basename, extname, join, dirname } from "path";
 import type { Listing, FilterCriteria, Statistics, HostRanking, DataHandlerState } from "./types/index";
 
 /**
@@ -387,18 +389,16 @@ export const createAirBnBDataHandler = async (filePath: string) => {
   ): Promise<void> => {
     try {
       // Create exports directory if it doesn't exist
-      const fs = await import("fs");
-      const path = await import("path");
       const exportsDir = "exports";
 
       // Using fs.promises API for async file operations
-      if (!fs.existsSync(exportsDir)) {
-        fs.mkdirSync(exportsDir, { recursive: true });
+      if (!existsSync(exportsDir)) {
+        mkdirSync(exportsDir, { recursive: true });
       }
 
       // Construct full path in exports directory
-      const fileName = path.basename(outputPath);
-      const exportPath = path.join(exportsDir, fileName);
+      const fileName = basename(outputPath);
+      const exportPath = join(exportsDir, fileName);
 
       // Automatically compute statistics and host rankings if not already computed
       if (state.statistics === null && format === "json") {
@@ -518,17 +518,15 @@ export const createAirBnBDataHandler = async (filePath: string) => {
     filters: FilterCriteria | null,
     format: string
   ): Promise<void> => {
-    const path = await import("path");
-
     // Generate the description file path by adding format indicator and changing the extension to .txt
-    let descriptionFileName = `${path.basename(exportPath, path.extname(exportPath))}_filters.txt`;
+    let descriptionFileName = `${basename(exportPath, extname(exportPath))}_filters.txt`;
 
     // If format is CSV, add _csv to the filename
     if (format === "csv") {
-      descriptionFileName = `${path.basename(exportPath, path.extname(exportPath))}_csv_filters.txt`;
+      descriptionFileName = `${basename(exportPath, extname(exportPath))}_csv_filters.txt`;
     }
 
-    const descriptionPath = path.join(path.dirname(exportPath), descriptionFileName);
+    const descriptionPath = join(dirname(exportPath), descriptionFileName);
 
     // Generate filter description content
     let content = "Applied Filters:\n\n";

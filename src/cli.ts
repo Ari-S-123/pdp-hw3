@@ -7,7 +7,7 @@
  * @module CLI
  */
 
-import * as readline from "readline/promises";
+import { createInterface, Interface } from "readline/promises";
 import type { AirBnBDataHandler, Listing, HostRanking, FilterCriteria } from "./types/index";
 
 /**
@@ -23,7 +23,7 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
    * @returns {Promise<void>} A promise that resolves when the CLI is closed
    */
   const startCLI = async (): Promise<void> => {
-    const rl = readline.createInterface({
+    const rl = createInterface({
       input: process.stdin,
       output: process.stdout
     });
@@ -77,7 +77,7 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
    * @param {readline.Interface} rl - The readline interface for user input
    * @returns {Promise<void>} A promise that resolves when filtering is complete
    */
-  const handleFiltering = async (rl: readline.Interface): Promise<void> => {
+  const handleFiltering = async (rl: Interface): Promise<void> => {
     console.log("\n=== FILTER LISTINGS ===");
 
     // Name filter
@@ -188,9 +188,17 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
       return;
     }
 
+    // Display basic information
     console.log(`Number of listings: ${stats.count}`);
-    console.log("\nAverage price per room type:");
 
+    // Display price statistics with formatting
+    console.log("\n--- Price Statistics ---");
+    console.log(`Median price: $${stats.medianPrice.toFixed(2)}`);
+    console.log(`Minimum price: $${stats.minPrice.toFixed(2)}`);
+    console.log(`Maximum price: $${stats.maxPrice.toFixed(2)}`);
+
+    // Display average price per room type
+    console.log("\n--- Average Price per Room Type ---");
     Object.entries(stats.averagePricePerRoom)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .forEach(([roomType, price]) => {
@@ -198,6 +206,18 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
         const formattedPrice = isNaN(price as number) ? "N/A" : `$${(price as number).toFixed(2)}`;
         console.log(`${roomType}: ${formattedPrice}`);
       });
+
+    // Display review-related statistics
+    console.log("\n--- Review Statistics ---");
+    console.log(`Average reviews per listing: ${stats.averageReviews.toFixed(2)}`);
+    console.log(`Average reviews in last 12 months: ${stats.averageReviewsLtm.toFixed(2)}`);
+    console.log(`Average reviews per month: ${stats.averageReviewsPerMonth.toFixed(2)}`);
+
+    // Display other averages
+    console.log("\n--- Other Statistics ---");
+    console.log(`Average minimum nights required: ${stats.averageMinimumNights.toFixed(2)}`);
+    console.log(`Average availability (days/year): ${stats.averageAvailability.toFixed(2)}`);
+    console.log(`Average listings per host: ${stats.averageHostListingsCount.toFixed(2)}`);
   };
 
   /**
@@ -234,7 +254,7 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
    * @param {readline.Interface} rl - The readline interface for user input
    * @returns {Promise<void>} A promise that resolves when the export is complete
    */
-  const handleExport = async (rl: readline.Interface): Promise<void> => {
+  const handleExport = async (rl: Interface): Promise<void> => {
     console.log("\n=== EXPORT RESULTS ===");
 
     // Get output file path
@@ -341,7 +361,7 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
    * @param {readline.Interface} rl - The readline interface for user input
    * @returns {Promise<void>} A promise that resolves when the user exits the display
    */
-  const handleDisplayResults = async (rl: readline.Interface): Promise<void> => {
+  const handleDisplayResults = async (rl: Interface): Promise<void> => {
     console.log("\n=== CURRENT RESULTS ===");
 
     const listings = dataHandler.getFilteredListings();
@@ -437,11 +457,7 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
    * @param {boolean} [allowEmpty=false] - Whether to allow empty input (returns undefined)
    * @returns {Promise<number | undefined>} A promise that resolves to the parsed number or undefined
    */
-  const getNumberInput = async (
-    rl: readline.Interface,
-    prompt: string,
-    allowEmpty = false
-  ): Promise<number | undefined> => {
+  const getNumberInput = async (rl: Interface, prompt: string, allowEmpty = false): Promise<number | undefined> => {
     while (true) {
       const input = await rl.question(prompt);
 
