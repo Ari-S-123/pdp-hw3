@@ -57,7 +57,7 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
           await handleExport(rl);
           break;
         case "5":
-          handleDisplayResults();
+          await handleDisplayResults(rl);
           break;
         case "6":
           running = false;
@@ -296,37 +296,136 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
   };
 
   /**
-   * Handles displaying current results
-   * Shows a summary of the currently filtered listings
+   * Pure function to calculate pagination metadata
    *
-   * @returns {void}
+   * @param {number} totalItems - Total number of items to paginate
+   * @param {number} pageSize - Number of items per page
+   * @param {number} currentPage - Current page number (1-based)
+   * @returns {Object} Pagination metadata including start and end indices
    */
-  const handleDisplayResults = (): void => {
+  const calculatePagination = (totalItems: number, pageSize: number, currentPage: number) => {
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const normalizedPage = Math.max(1, Math.min(currentPage, totalPages));
+    const startIndex = (normalizedPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+    return {
+      totalPages,
+      currentPage: normalizedPage,
+      startIndex,
+      endIndex,
+      hasPrevPage: normalizedPage > 1,
+      hasNextPage: normalizedPage < totalPages
+    };
+  };
+
+  /**
+   * Pure function to generate navigation options text
+   *
+   * @returns {string} Formatted navigation menu text
+   */
+  const getNavigationOptions = (): string => {
+    return [
+      "\n=== NAVIGATION ===",
+      "n: Next page",
+      "p: Previous page",
+      "g: Go to specific page",
+      "q: Return to main menu"
+    ].join("\n");
+  };
+
+  /**
+   * Handles displaying current results
+   * Shows paginated view of the currently filtered listings
+   *
+   * @param {readline.Interface} rl - The readline interface for user input
+   * @returns {Promise<void>} A promise that resolves when the user exits the display
+   */
+  const handleDisplayResults = async (rl: readline.Interface): Promise<void> => {
     console.log("\n=== CURRENT RESULTS ===");
 
     const listings = dataHandler.getFilteredListings();
     console.log(`Current filtered listings: ${listings.length}`);
 
-    if (listings.length > 0) {
-      console.log("\nSample of listings:");
-      listings.slice(0, 5).forEach((listing: Listing, index: number) => {
-        console.log(`\n${index + 1}. ${listing.name} (ID: ${listing.id})`);
-        console.log(`   Host: ${listing.host_name} (ID: ${listing.host_id})`);
-        // Format price as currency with 2 decimal places
-        const formattedPrice = isNaN(listing.price) ? "N/A" : `$${listing.price.toFixed(2)}`;
-        console.log(`   Price: ${formattedPrice}`);
-        console.log(`   Room type: ${listing.room_type}`);
-        console.log(`   Location: ${listing.neighbourhood}`);
-        console.log(`   Minimum nights: ${listing.minimum_nights}`);
-        console.log(`   Reviews: ${listing.number_of_reviews}`);
-        console.log(`   Reviews in last 12 months: ${listing.number_of_reviews_ltm}`);
-        console.log(`   Availability (days/year): ${listing.availability_365}`);
+    if (listings.length === 0) {
+      return;
+    }
+
+    // Pagination configuration
+    const pageSize = 5;
+    let currentPage = 1;
+    let exitDisplay = false;
+
+    // Use the existing readline interface passed from the main menu
+    // (No need to create a new one or close it when done)
+
+    // Display listings with pagination
+    while (!exitDisplay) {
+      // Clear previous page (not supported in all terminals, but helps when it works)
+      console.log("\n");
+
+      // Use pure function to calculate pagination
+      const pagination = calculatePagination(listings.length, pageSize, currentPage);
+      currentPage = pagination.currentPage; // Normalized current page
+
+      // Display page header
+      console.log(`\nListings (Page ${pagination.currentPage}/${pagination.totalPages}):`);
+
+      // Display listings for current page
+      const currentPageListings = listings.slice(pagination.startIndex, pagination.endIndex);
+      currentPageListings.forEach((listing: Listing, index: number) => {
+        const absoluteIndex = pagination.startIndex + index;
+        // Use the pure formatListing function and print the result
+        console.log(formatListing(listing, absoluteIndex + 1));
       });
 
-      if (listings.length > 5) {
-        console.log(`\n... and ${listings.length - 5} more listings.`);
+      // Display navigation options using pure function
+      console.log(getNavigationOptions());
+
+      // Get navigation input using the passed readline interface
+      const choice = await rl.question("\nEnter your choice: ");
+
+      // Process navigation choice
+      let pageNum: number;
+      let pageInput: string;
+
+      switch (choice.toLowerCase()) {
+        case "n":
+          // Go to next page if possible
+          if (pagination.hasNextPage) {
+            currentPage++;
+          } else {
+            console.log("You are already at the last page.");
+          }
+          break;
+        case "p":
+          // Go to previous page if possible
+          if (pagination.hasPrevPage) {
+            currentPage--;
+          } else {
+            console.log("You are already at the first page.");
+          }
+          break;
+        case "g":
+          // Use the same readline interface for page input
+          pageInput = await rl.question(`Enter page number (1-${pagination.totalPages}): `);
+
+          pageNum = parseInt(pageInput);
+          if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= pagination.totalPages) {
+            currentPage = pageNum;
+          } else {
+            console.log(`Invalid page number. Please enter a number between 1 and ${pagination.totalPages}.`);
+          }
+          break;
+        case "q":
+          exitDisplay = true;
+          break;
+        default:
+          console.log("Invalid choice. Please try again.");
       }
     }
+
+    // Don't close the readline interface here as it was passed in
   };
 
   /**
@@ -357,6 +456,30 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
 
       console.log("Please enter a valid number.");
     }
+  };
+
+  /**
+   * Pure function to format and display a single listing
+   *
+   * @param {Listing} listing - The listing to display
+   * @param {number} index - The display index of the listing
+   * @returns {string} Formatted listing information
+   */
+  const formatListing = (listing: Listing, index: number): string => {
+    // Format price as currency with 2 decimal places
+    const formattedPrice = isNaN(listing.price) ? "N/A" : `$${listing.price.toFixed(2)}`;
+
+    return [
+      `\n${index}. ${listing.name} (ID: ${listing.id})`,
+      `   Host: ${listing.host_name} (ID: ${listing.host_id})`,
+      `   Price: ${formattedPrice}`,
+      `   Room type: ${listing.room_type}`,
+      `   Location: ${listing.neighbourhood}`,
+      `   Minimum nights: ${listing.minimum_nights}`,
+      `   Reviews: ${listing.number_of_reviews}`,
+      `   Reviews in last 12 months: ${listing.number_of_reviews_ltm}`,
+      `   Availability (days/year): ${listing.availability_365}`
+    ].join("\n");
   };
 
   return { startCLI };

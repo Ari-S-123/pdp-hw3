@@ -15,7 +15,7 @@
  * @property {number} minimum_nights - Minimum number of nights required to book
  * @property {number} number_of_reviews - Total number of reviews received
  * @property {string} last_review - Date of the last review (ISO format)
- * @property {number} reviews_per_month - Average number of reviews per month
+ * @property {number|null} reviews_per_month - Average number of reviews per month
  * @property {number} calculated_host_listings_count - Number of listings the host has
  * @property {number} availability_365 - Number of days available in a year
  * @property {number} number_of_reviews_ltm - Number of reviews in the last 12 months
@@ -35,7 +35,7 @@ export type Listing = {
   minimum_nights: number;
   number_of_reviews: number;
   last_review: string;
-  reviews_per_month: number;
+  reviews_per_month: number | null;
   calculated_host_listings_count: number;
   availability_365: number;
   number_of_reviews_ltm: number;

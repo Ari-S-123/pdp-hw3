@@ -4,7 +4,7 @@ A functional programming application for processing AirBnB listings data. This p
 
 ## TODO
 
-- [ ] Add creative addition
+- [x] Add creative addition
 - [ ] Document AI usage
 - [ ] Add demo video
 
@@ -26,19 +26,31 @@ A functional programming application for processing AirBnB listings data. This p
 
   - Total count of filtered listings
   - Average price per room type
+  - Average number of reviews per listing
+  - Average number of reviews in the last 12 months
+  - Average minimum nights required for booking
+  - Average availability out of 365 days
+  - Average reviews per month (non-null values only)
+  - Average number of listings per host
+  - Median price of all listings
+  - Minimum price among listings
+  - Maximum price among listings
 
 - **Rank hosts** by number of listings
 
   - Sort hosts by the number of listings they have
   - Display top hosts with listing counts
 
-- **Export results** to a JSON file
+- **Export results** to file formats:
 
-  - Save filtered listings, statistics, and host rankings
+  - JSON format (includes listings, statistics, and host rankings)
+  - CSV format (includes only the listings data)
+  - Includes automatic creation of a descriptive file with applied filters
 
 - **Interactive command-line interface**
   - User-friendly menu system
   - Guided filtering process
+  - Paginated browsing of filtered listings
 
 ## Setup
 
@@ -69,8 +81,11 @@ The application provides an interactive command-line interface with the followin
 1. **Filter listings**: Apply various filter criteria to narrow down listings
 2. **Compute statistics**: Calculate statistics on the currently filtered listings
 3. **Rank hosts**: Generate a ranking of hosts by number of listings
-4. **Export results**: Export the current results to a JSON file
-5. **Display results**: Show a sample of the current filtered listings
+4. **Export results**: Export the current results to a JSON or CSV file
+5. **Display results**: Show paginated view of filtered listings with navigation controls:
+   - Browse through listings with next/previous page options
+   - Jump to a specific page
+   - View complete listing details
 6. **Exit**: Exit the application
 
 ## Project Structure
@@ -142,4 +157,4 @@ TODO
 
 TODO
 
-I used Cursor with `claude-3.7-sonnet-thinking` to help me generate documentation, tests, and some type definitions.
+I used Cursor Composer in Agent mode with `claude-3.7-sonnet-thinking` to help me generate documentation, tests, and some type definitions.

@@ -17,31 +17,80 @@ Pure functions are functions that:
 ```typescript
 // Pure function from airbnb-data-handler.ts
 const parseRow = (row: string): Listing => {
-  const values = row.split(",");
+  // More robust CSV parsing that handles quoted values with commas
+  const values: string[] = [];
+  let currentValue = "";
+  let insideQuotes = false;
+  let i = 0;
+
+  while (i < row.length) {
+    const char = row[i];
+
+    // This is giving me too many headaches
+    // eslint-disable-next-line quotes
+    if (char === '"' && (i === 0 || row[i - 1] !== "\\")) {
+      insideQuotes = !insideQuotes;
+    } else if (char === "," && !insideQuotes) {
+      values.push(currentValue);
+      currentValue = "";
+    } else {
+      currentValue += char;
+    }
+
+    i++;
+  }
+
+  // Add the last value
+  values.push(currentValue);
+
+  // Clean up values - remove surrounding quotes and unescape embedded quotes
+  const cleanValues = values.map((value) => {
+    let cleanValue = value.trim();
+    // If value starts and ends with quotes, remove them
+    // This is giving me too many headaches
+    // eslint-disable-next-line quotes
+    if (cleanValue.startsWith('"') && cleanValue.endsWith('"')) {
+      cleanValue = cleanValue.slice(1, -1);
+    }
+    // Replace double quotes with single quotes - using double quotes for string literals
+    // This is giving me too many headaches
+    // eslint-disable-next-line quotes
+    cleanValue = cleanValue.replace(/""/g, '"');
+    return cleanValue;
+  });
 
   // Clean price value - remove $ and any non-numeric characters except decimal point
-  const priceStr = values[9] ? values[9].replace(/[$,]/g, "") : "0";
+  const priceStr = cleanValues[9] ? cleanValues[9].replace(/[$,]/g, "") : "0";
   const price = parseFloat(priceStr);
 
+  // Parse reviews_per_month, but preserve empty values
+  let reviewsPerMonth: number | null = null;
+  if (cleanValues[13] && cleanValues[13].trim() !== "") {
+    reviewsPerMonth = parseFloat(cleanValues[13]);
+    if (isNaN(reviewsPerMonth)) {
+      reviewsPerMonth = 0;
+    }
+  }
+
   return {
-    id: values[0] || "",
-    name: values[1] || "",
-    host_id: values[2] || "",
-    host_name: values[3] || "",
-    neighbourhood_group: values[4] || "",
-    neighbourhood: values[5] || "",
-    latitude: parseFloat(values[6] || "0"),
-    longitude: parseFloat(values[7] || "0"),
-    room_type: values[8] || "",
+    id: cleanValues[0] || "",
+    name: cleanValues[1] || "",
+    host_id: cleanValues[2] || "",
+    host_name: cleanValues[3] || "",
+    neighbourhood_group: cleanValues[4] || "",
+    neighbourhood: cleanValues[5] || "",
+    latitude: parseFloat(cleanValues[6] || "0"),
+    longitude: parseFloat(cleanValues[7] || "0"),
+    room_type: cleanValues[8] || "",
     price: isNaN(price) ? 0 : price, // Default to 0 if price is NaN
-    minimum_nights: parseInt(values[10] || "0"),
-    number_of_reviews: parseInt(values[11] || "0"),
-    last_review: values[12] || "",
-    reviews_per_month: parseFloat(values[13] || "0") || 0,
-    calculated_host_listings_count: parseInt(values[14] || "0"),
-    availability_365: parseInt(values[15] || "0"),
-    number_of_reviews_ltm: parseInt(values[16] || "0"),
-    license: values[17] || ""
+    minimum_nights: parseInt(cleanValues[10] || "0"),
+    number_of_reviews: parseInt(cleanValues[11] || "0"),
+    last_review: cleanValues[12] || "",
+    reviews_per_month: reviewsPerMonth,
+    calculated_host_listings_count: parseInt(cleanValues[14] || "0"),
+    availability_365: parseInt(cleanValues[15] || "0"),
+    number_of_reviews_ltm: parseInt(cleanValues[16] || "0"),
+    license: cleanValues[17] || ""
   };
 };
 ```
@@ -102,8 +151,12 @@ Function composition enables creating new functions by combining existing ones.
 const filter = (criteria: FilterCriteria) => {
   state.filteredListings = state.allListings.filter((listing) => {
     // Filter logic...
+    // (Multiple filter conditions checked)
     return true;
   });
+
+  // Store the applied filters (make a copy to avoid external mutation)
+  state.lastAppliedFilters = { ...criteria };
 
   // Reset statistics and rankings when filtering
   state.statistics = null;
@@ -112,7 +165,7 @@ const filter = (criteria: FilterCriteria) => {
   return handler; // Return handler for method chaining
 };
 
-// Usage example (from test.ts)
+// Usage example (possible usage pattern):
 dataHandler
   .filter({
     minPrice: 200,
@@ -145,6 +198,9 @@ const getStatistics = (): Statistics | null => {
 const getHostRankings = (): HostRanking[] | null => {
   return state.hostRankings ? [...state.hostRankings] : null; // Return a copy of the array
 };
+
+// When setting applied filters, we make a copy to avoid external mutation
+state.lastAppliedFilters = { ...criteria };
 ```
 
 ## Counter-Examples: Breaking Functional Programming Principles
@@ -177,205 +233,168 @@ const badFilter = (criteria: FilterCriteria) => {
 };
 ```
 
-### 2. Using Shared, Mutable State
+### 2. Impure CSV Parsing (Alternative to parseRow)
 
 ```typescript
 // BAD EXAMPLE - DO NOT USE
-// This uses a shared mutable state which leads to unpredictable behavior
-class ListingManager {
-  private listings: Listing[] = [];
-  private filteredListings: Listing[] = [];
-  private statistics: Statistics | null = null;
+// This breaks purity by using global state and causing side effects
+let lastParsedRow: string = ""; // Global state
 
-  constructor(filePath: string) {
-    // Load listings from file
-    // Direct mutation of instance property
-    this.listings = loadListingsFromFile(filePath);
-    this.filteredListings = this.listings;
-  }
+const impureParseRow = (row: string): Listing => {
+  // Side effect: logging
+  console.log(`Parsing row: ${row.substring(0, 50)}...`);
 
-  filterListings(criteria: FilterCriteria) {
-    // Directly modifies the shared state
-    this.filteredListings = this.listings.filter((listing) => {
-      // Filter logic
-      return listing.price >= (criteria.minPrice || 0);
-    });
+  // Side effect: mutating external state
+  lastParsedRow = row;
 
-    // Side effect: modifying unrelated state
-    this.statistics = null;
-  }
+  // Direct side effect: writing to file system
+  require("fs").appendFileSync("parsing-log.txt", `Parsed row at ${new Date()}: ${row}\n`);
 
-  getListings() {
-    // Returns a reference to the mutable array, not a copy
-    return this.filteredListings;
-  }
+  const values = row.split(",");
 
-  computeStatistics() {
-    // Direct mutation of instance property
-    this.statistics = {
-      count: this.filteredListings.length,
-      averagePricePerRoom: {}
-    };
+  // Rest of parsing logic similar to before
+  // ...
 
-    // More calculations with mutations...
-  }
-}
-```
-
-### 3. Using Classes and Inheritance Instead of Composition
-
-```typescript
-// BAD EXAMPLE - DO NOT USE
-// Using classes and inheritance instead of function composition
-class BaseHandler {
-  protected allListings: Listing[] = [];
-  protected filteredListings: Listing[] = [];
-
-  constructor(filePath: string) {
-    // Load data
-    this.allListings = loadDataFromFile(filePath);
-    this.filteredListings = [...this.allListings];
-  }
-
-  getListings() {
-    return this.filteredListings;
-  }
-}
-
-class FilterHandler extends BaseHandler {
-  filterByPrice(minPrice: number) {
-    this.filteredListings = this.filteredListings.filter((listing) => listing.price >= minPrice);
-    return this;
-  }
-
-  filterByRoomType(roomType: string) {
-    this.filteredListings = this.filteredListings.filter((listing) => listing.room_type === roomType);
-    return this;
-  }
-
-  filterByName(name: string) {
-    this.filteredListings = this.filteredListings.filter((listing) =>
-      listing.name.toLowerCase().includes(name.toLowerCase())
-    );
-    return this;
-  }
-}
-
-class StatsHandler extends FilterHandler {
-  private statistics: Statistics | null = null;
-
-  computeStats() {
-    // Compute stats logic with mutation
-    this.statistics = {
-      count: this.filteredListings.length,
-      averagePricePerRoom: {}
-    };
-
-    // More calculations...
-    return this;
-  }
-
-  getStatistics() {
-    return this.statistics; // Returning a reference, not a copy
-  }
-}
-
-// Usage with inheritance
-const handler = new StatsHandler("listings.csv");
-handler.filterByPrice(200).filterByRoomType("Entire home/apt").computeStats();
-```
-
-### 4. Side Effects in Core Logic
-
-```typescript
-// BAD EXAMPLE - DO NOT USE
-// Function with side effects
-const computeAndSaveStats = (listings: Listing[]): Statistics => {
-  // Calculate room type prices
-  const roomTypePrices: Record<string, number[]> = {};
-
-  listings.forEach((listing) => {
-    if (!roomTypePrices[listing.room_type]) {
-      roomTypePrices[listing.room_type] = [];
-    }
-    roomTypePrices[listing.room_type].push(listing.price);
-  });
-
-  const averages: Record<string, number> = {};
-
-  // Side effect: writing to console inside core logic
-  console.log(`Calculating statistics for ${listings.length} listings`);
-
-  for (const [roomType, prices] of Object.entries(roomTypePrices)) {
-    if (prices.length > 0) {
-      const total = prices.reduce((sum, price) => sum + price, 0);
-      averages[roomType] = total / prices.length;
-
-      // Side effect: writing to console inside calculations
-      console.log(`Average price for ${roomType}: $${averages[roomType].toFixed(2)}`);
-    }
-  }
-
-  const statistics = {
-    count: listings.length,
-    averagePricePerRoom: averages
+  return {
+    id: values[0] || "",
+    name: values[1] || ""
+    // ...other fields
   };
-
-  // Side effect: Writing to filesystem inside business logic
-  const fs = require("fs");
-  fs.writeFileSync("./latest-stats.json", JSON.stringify(statistics));
-
-  return statistics;
 };
 ```
 
-### 5. Imperative Instead of Declarative Approach
+### 3. Using Loops and Mutations Instead of Higher-Order Functions
 
 ```typescript
 // BAD EXAMPLE - DO NOT USE
-// Imperative approach with loops and mutable variables for host rankings
-const badComputeHostRankings = (listings: Listing[]) => {
-  const hostCounts: Record<string, { count: number; name: string }> = {};
+// Using loops and mutations instead of higher-order functions
 
-  // Imperative loop with mutation
-  for (let i = 0; i < listings.length; i++) {
-    const listing = listings[i];
-    const hostId = listing.host_id;
+// Instead of using filter and map for loading data:
+const badLoadData = async (): Promise<void> => {
+  const content = await readFile(filePath, "utf-8");
+  const rows = content.split("\n");
 
-    if (hostCounts[hostId]) {
-      hostCounts[hostId].count++; // Mutation
-    } else {
-      hostCounts[hostId] = {
-        count: 1,
-        name: listing.host_name
-      };
+  // Skip header row
+  const dataRows = rows.slice(1);
+
+  state.allListings = [];
+
+  // Mutable approach with loops
+  for (let i = 0; i < dataRows.length; i++) {
+    const row = dataRows[i];
+    if (row.trim()) {
+      const listing = parseRow(row);
+      state.allListings.push(listing);
     }
   }
 
-  // Convert to array with another imperative loop
-  const rankings: HostRanking[] = [];
+  state.filteredListings = [];
+
+  // Another mutation with copy loop
+  for (let i = 0; i < state.allListings.length; i++) {
+    state.filteredListings.push(state.allListings[i]);
+  }
+};
+
+// Instead of using reduce and method chains for host rankings:
+const badComputeHostRankings = (): void => {
+  const hostCounts = {};
+
+  // Manual loop instead of reduce
+  for (let i = 0; i < state.filteredListings.length; i++) {
+    const listing = state.filteredListings[i];
+    if (!hostCounts[listing.host_id]) {
+      hostCounts[listing.host_id] = {
+        count: 0,
+        name: listing.host_name
+      };
+    }
+    hostCounts[listing.host_id].count++;
+  }
+
+  // Manual array creation instead of map
+  state.hostRankings = [];
   for (const hostId in hostCounts) {
-    rankings.push({
+    state.hostRankings.push({
       host_id: hostId,
       host_name: hostCounts[hostId].name,
       listingCount: hostCounts[hostId].count
     });
   }
 
-  // Sort with a manual bubble sort implementation
-  for (let i = 0; i < rankings.length; i++) {
-    for (let j = i + 1; j < rankings.length; j++) {
-      if (rankings[i].listingCount < rankings[j].listingCount) {
-        // Swap with mutation
-        const temp = rankings[i];
-        rankings[i] = rankings[j];
-        rankings[j] = temp;
+  // Manual sorting instead of sort method
+  for (let i = 0; i < state.hostRankings.length; i++) {
+    for (let j = i + 1; j < state.hostRankings.length; j++) {
+      if (state.hostRankings[i].listingCount < state.hostRankings[j].listingCount) {
+        const temp = state.hostRankings[i];
+        state.hostRankings[i] = state.hostRankings[j];
+        state.hostRankings[j] = temp;
       }
     }
   }
-
-  return rankings;
 };
+```
+
+### 4. Procedural Method Chaining Alternative
+
+```typescript
+// BAD EXAMPLE - DO NOT USE
+// Breaking method chaining with procedural approach
+
+class AirBnBProcessor {
+  private listings: Listing[] = [];
+  private filteredListings: Listing[] = [];
+  private statistics: Statistics | null = null;
+  private rankings: HostRanking[] | null = null;
+
+  constructor(filePath: string) {
+    // Load listings from file
+  }
+
+  filter(criteria: FilterCriteria): void {
+    this.filteredListings = this.listings.filter(/* filter logic */);
+    // No return value for chaining
+  }
+
+  computeStats(): void {
+    // Compute stats logic
+    // No return value for chaining
+  }
+
+  computeHostRankings(): void {
+    // Compute rankings logic
+    // No return value for chaining
+  }
+
+  // Procedural usage:
+  // const processor = new AirBnBProcessor("file.csv");
+  // processor.filter({ minPrice: 200 });
+  // processor.computeStats();
+  // processor.computeHostRankings();
+}
+```
+
+### 5. Breaking Immutability by Returning References
+
+```typescript
+// BAD EXAMPLE - DO NOT USE
+// Returning references to internal state instead of copies
+
+const badGetFilteredListings = (): Listing[] => {
+  return state.filteredListings; // Returning direct reference, not a copy
+};
+
+const badGetStatistics = (): Statistics | null => {
+  return state.statistics; // Returning direct reference, not a copy
+};
+
+const badGetHostRankings = (): HostRanking[] | null => {
+  return state.hostRankings; // Returning direct reference, not a copy
+};
+
+// This would allow the caller to mutate internal state directly:
+// const listings = badGetFilteredListings();
+// listings.pop(); // This would modify state.filteredListings!
 ```
 
 ## Conclusion

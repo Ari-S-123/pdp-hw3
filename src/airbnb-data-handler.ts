@@ -39,31 +39,80 @@ export const createAirBnBDataHandler = async (filePath: string) => {
    * @private
    */
   const parseRow = (row: string): Listing => {
-    const values = row.split(",");
+    // More robust CSV parsing that handles quoted values with commas
+    const values: string[] = [];
+    let currentValue = "";
+    let insideQuotes = false;
+    let i = 0;
+
+    while (i < row.length) {
+      const char = row[i];
+
+      // This is giving me too many headaches
+      // eslint-disable-next-line quotes
+      if (char === '"' && (i === 0 || row[i - 1] !== "\\")) {
+        insideQuotes = !insideQuotes;
+      } else if (char === "," && !insideQuotes) {
+        values.push(currentValue);
+        currentValue = "";
+      } else {
+        currentValue += char;
+      }
+
+      i++;
+    }
+
+    // Add the last value
+    values.push(currentValue);
+
+    // Clean up values - remove surrounding quotes and unescape embedded quotes
+    const cleanValues = values.map((value) => {
+      let cleanValue = value.trim();
+      // If value starts and ends with quotes, remove them
+      // This is giving me too many headaches
+      // eslint-disable-next-line quotes
+      if (cleanValue.startsWith('"') && cleanValue.endsWith('"')) {
+        cleanValue = cleanValue.slice(1, -1);
+      }
+      // Replace double quotes with single quotes - using double quotes for string literals
+      // This is giving me too many headaches
+      // eslint-disable-next-line quotes
+      cleanValue = cleanValue.replace(/""/g, '"');
+      return cleanValue;
+    });
 
     // Clean price value - remove $ and any non-numeric characters except decimal point
-    const priceStr = values[9] ? values[9].replace(/[$,]/g, "") : "0";
+    const priceStr = cleanValues[9] ? cleanValues[9].replace(/[$,]/g, "") : "0";
     const price = parseFloat(priceStr);
 
+    // Parse reviews_per_month, but preserve empty values
+    let reviewsPerMonth: number | null = null;
+    if (cleanValues[13] && cleanValues[13].trim() !== "") {
+      reviewsPerMonth = parseFloat(cleanValues[13]);
+      if (isNaN(reviewsPerMonth)) {
+        reviewsPerMonth = 0;
+      }
+    }
+
     return {
-      id: values[0] || "",
-      name: values[1] || "",
-      host_id: values[2] || "",
-      host_name: values[3] || "",
-      neighbourhood_group: values[4] || "",
-      neighbourhood: values[5] || "",
-      latitude: parseFloat(values[6] || "0"),
-      longitude: parseFloat(values[7] || "0"),
-      room_type: values[8] || "",
+      id: cleanValues[0] || "",
+      name: cleanValues[1] || "",
+      host_id: cleanValues[2] || "",
+      host_name: cleanValues[3] || "",
+      neighbourhood_group: cleanValues[4] || "",
+      neighbourhood: cleanValues[5] || "",
+      latitude: parseFloat(cleanValues[6] || "0"),
+      longitude: parseFloat(cleanValues[7] || "0"),
+      room_type: cleanValues[8] || "",
       price: isNaN(price) ? 0 : price, // Default to 0 if price is NaN
-      minimum_nights: parseInt(values[10] || "0"),
-      number_of_reviews: parseInt(values[11] || "0"),
-      last_review: values[12] || "",
-      reviews_per_month: parseFloat(values[13] || "0") || 0,
-      calculated_host_listings_count: parseInt(values[14] || "0"),
-      availability_365: parseInt(values[15] || "0"),
-      number_of_reviews_ltm: parseInt(values[16] || "0"),
-      license: values[17] || ""
+      minimum_nights: parseInt(cleanValues[10] || "0"),
+      number_of_reviews: parseInt(cleanValues[11] || "0"),
+      last_review: cleanValues[12] || "",
+      reviews_per_month: reviewsPerMonth,
+      calculated_host_listings_count: parseInt(cleanValues[14] || "0"),
+      availability_365: parseInt(cleanValues[15] || "0"),
+      number_of_reviews_ltm: parseInt(cleanValues[16] || "0"),
+      license: cleanValues[17] || ""
     };
   };
 
@@ -190,6 +239,23 @@ export const createAirBnBDataHandler = async (filePath: string) => {
   const computeStats = () => {
     const count = state.filteredListings.length;
 
+    if (count === 0) {
+      state.statistics = {
+        count: 0,
+        averagePricePerRoom: {},
+        averageReviews: 0,
+        averageReviewsLtm: 0,
+        averageMinimumNights: 0,
+        averageAvailability: 0,
+        averageReviewsPerMonth: 0,
+        averageHostListingsCount: 0,
+        medianPrice: 0,
+        minPrice: 0,
+        maxPrice: 0
+      };
+      return handler;
+    }
+
     // Define valid room types
     const validRoomTypes = ["Entire home/apt", "Private room", "Shared room", "Hotel room"];
 
@@ -201,10 +267,37 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       roomTypePrices[type] = [];
     });
 
-    // Collect prices for each room type
+    // Collect numeric values for calculating averages
+    let sumReviews = 0;
+    let sumReviewsLtm = 0;
+    let sumMinimumNights = 0;
+    let sumAvailability = 0;
+    let sumReviewsPerMonth = 0;
+    let reviewsPerMonthCount = 0; // Count of non-null reviews_per_month values
+    let sumHostListingsCount = 0;
+    const allPrices: number[] = [];
+
+    // Collect prices for each room type and calculate sums for averages
     state.filteredListings.forEach((listing) => {
+      // Collect prices by room type
       if (validRoomTypes.includes(listing.room_type) && !isNaN(listing.price)) {
         roomTypePrices[listing.room_type].push(listing.price);
+      }
+
+      // Collect all prices for median/min/max
+      allPrices.push(listing.price);
+
+      // Sum values for averages
+      sumReviews += listing.number_of_reviews;
+      sumReviewsLtm += listing.number_of_reviews_ltm;
+      sumMinimumNights += listing.minimum_nights;
+      sumAvailability += listing.availability_365;
+      sumHostListingsCount += listing.calculated_host_listings_count;
+
+      // Only count non-null reviews_per_month values
+      if (listing.reviews_per_month !== null) {
+        sumReviewsPerMonth += listing.reviews_per_month;
+        reviewsPerMonthCount++;
       }
     });
 
@@ -217,9 +310,32 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       }
     }
 
+    // Sort prices for median calculation
+    allPrices.sort((a, b) => a - b);
+
+    // Calculate median price
+    let medianPrice = 0;
+    const midIndex = Math.floor(allPrices.length / 2);
+    if (allPrices.length % 2 === 0) {
+      // Even number of prices, average the two middle values
+      medianPrice = (allPrices[midIndex - 1] + allPrices[midIndex]) / 2;
+    } else {
+      // Odd number of prices, take the middle value
+      medianPrice = allPrices[midIndex];
+    }
+
     state.statistics = {
       count,
-      averagePricePerRoom: averages
+      averagePricePerRoom: averages,
+      averageReviews: sumReviews / count,
+      averageReviewsLtm: sumReviewsLtm / count,
+      averageMinimumNights: sumMinimumNights / count,
+      averageAvailability: sumAvailability / count,
+      averageReviewsPerMonth: reviewsPerMonthCount > 0 ? sumReviewsPerMonth / reviewsPerMonthCount : 0,
+      averageHostListingsCount: sumHostListingsCount / count,
+      medianPrice: medianPrice,
+      minPrice: allPrices.length > 0 ? allPrices[0] : 0,
+      maxPrice: allPrices.length > 0 ? allPrices[allPrices.length - 1] : 0
     };
 
     return handler; // Return handler for method chaining
@@ -284,6 +400,15 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       const fileName = path.basename(outputPath);
       const exportPath = path.join(exportsDir, fileName);
 
+      // Automatically compute statistics and host rankings if not already computed
+      if (state.statistics === null && format === "json") {
+        computeStats();
+      }
+
+      if (state.hostRankings === null && format === "json") {
+        computeHostRankings();
+      }
+
       // Prepare the data for export
       const results = {
         filteredListings: state.filteredListings,
@@ -339,29 +464,42 @@ export const createAirBnBDataHandler = async (filePath: string) => {
     // Get headers from the first listing
     const headers = Object.keys(listings[0]);
 
-    // Convert listings to CSV rows
+    // Convert listings to CSV rows - proper CSV escaping
     const rows = listings.map((listing) => {
       return headers
         .map((header) => {
           const value = listing[header as keyof Listing];
-          // Handle special cases for CSV formatting
+
+          // Handle null, undefined, or empty values
           if (value === null || value === undefined) {
             return "";
           }
-          // These rules being disabled are necessary in this case because this was giving me too many headaches
-          // eslint-disable-next-line quotes
-          if (typeof value === "string" && (value.includes(",") || value.includes('"'))) {
-            // Escape quotes and wrap in quotes if the string contains commas or quotes
+
+          // Convert value to string
+          const stringValue = String(value);
+
+          // If the value contains quotes, commas, or newlines, it needs to be quoted
+          if (
+            // This is giving me too many headaches
             // eslint-disable-next-line quotes
-            return `"${value.replace(/"/g, '""')}"`;
+            stringValue.includes('"') ||
+            stringValue.includes(",") ||
+            stringValue.includes("\n") ||
+            stringValue.includes("\r")
+          ) {
+            // Escape quotes by doubling them and wrap in quotes - using double quotes for string literals
+            // This is giving me too many headaches
+            // eslint-disable-next-line quotes
+            return `"${stringValue.replace(/"/g, '""')}"`;
           }
-          return String(value);
+
+          return stringValue;
         })
         .join(",");
     });
 
-    // Combine headers and rows
-    const csvContent = [headers.join(","), ...rows].join("\n");
+    // Combine headers and rows with a trailing newline to match original format
+    const csvContent = [headers.join(","), ...rows].join("\n") + "\n";
 
     await writeFile(filePath, csvContent, "utf-8");
   };
