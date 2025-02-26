@@ -6,21 +6,22 @@
   "scripts": {
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
-    "start": "bun run src/index.ts",
+    "start": "bun run src/index.ts listings.csv",
     "test": "bun run src/test.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@eslint/js": "^9.21.0",
-    "typescript-eslint": "^8.24.1"
+    "typescript-eslint": "^8.25.0",
+    "eslint-config-prettier": "^10.0.2"
   },
   "peerDependencies": {
-    "typescript": "^5",
+    "typescript": "^5.7.3",
     "eslint": "^9.21.0",
-    "eslint-config-prettier": "^10.0.1",
     "prettier": "^3.5.2"
   },
   "dependencies": {
+    "fast-csv": "^5.0.2",
     "globals": "^16.0.0"
   }
 }

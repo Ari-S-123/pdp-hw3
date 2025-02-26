@@ -7,9 +7,11 @@
  * @module AirBnBDataHandler
  */
 
-import { readFile, writeFile } from "fs/promises";
-import { existsSync, mkdirSync } from "fs";
+import { writeFile } from "fs/promises";
+import { existsSync, mkdirSync, createReadStream, createWriteStream } from "fs";
 import { basename, extname, join, dirname } from "path";
+import { parse } from "@fast-csv/parse";
+import { format } from "@fast-csv/format";
 import type { Listing, FilterCriteria, Statistics, HostRanking, DataHandlerState } from "./types/index";
 
 /**
@@ -34,91 +36,6 @@ export const createAirBnBDataHandler = async (filePath: string) => {
   };
 
   /**
-   * Parses a CSV row into a Listing object
-   *
-   * @param {string} row - CSV row as a string
-   * @returns {Listing} A Listing object with parsed data
-   * @private
-   */
-  const parseRow = (row: string): Listing => {
-    // More robust CSV parsing that handles quoted values with commas
-    const values: string[] = [];
-    let currentValue = "";
-    let insideQuotes = false;
-    let i = 0;
-
-    while (i < row.length) {
-      const char = row[i];
-
-      // This is giving me too many headaches
-      // eslint-disable-next-line quotes
-      if (char === '"' && (i === 0 || row[i - 1] !== "\\")) {
-        insideQuotes = !insideQuotes;
-      } else if (char === "," && !insideQuotes) {
-        values.push(currentValue);
-        currentValue = "";
-      } else {
-        currentValue += char;
-      }
-
-      i++;
-    }
-
-    // Add the last value
-    values.push(currentValue);
-
-    // Clean up values - remove surrounding quotes and unescape embedded quotes
-    const cleanValues = values.map((value) => {
-      let cleanValue = value.trim();
-      // If value starts and ends with quotes, remove them
-      // This is giving me too many headaches
-      // eslint-disable-next-line quotes
-      if (cleanValue.startsWith('"') && cleanValue.endsWith('"')) {
-        cleanValue = cleanValue.slice(1, -1);
-      }
-      // Replace double quotes with single quotes - using double quotes for string literals
-      // This is giving me too many headaches
-      // eslint-disable-next-line quotes
-      cleanValue = cleanValue.replace(/""/g, '"');
-      return cleanValue;
-    });
-
-    // Clean price value - remove $ and any non-numeric characters except decimal point
-    const priceStr = cleanValues[9] ? cleanValues[9].replace(/[$,]/g, "") : "0";
-    const price = parseFloat(priceStr);
-
-    // Parse reviews_per_month, but preserve empty values
-    let reviewsPerMonth: number | null = null;
-    if (cleanValues[13] && cleanValues[13].trim() !== "") {
-      reviewsPerMonth = parseFloat(cleanValues[13]);
-      if (isNaN(reviewsPerMonth)) {
-        reviewsPerMonth = 0;
-      }
-    }
-
-    return {
-      id: cleanValues[0] || "",
-      name: cleanValues[1] || "",
-      host_id: cleanValues[2] || "",
-      host_name: cleanValues[3] || "",
-      neighbourhood_group: cleanValues[4] || "",
-      neighbourhood: cleanValues[5] || "",
-      latitude: parseFloat(cleanValues[6] || "0"),
-      longitude: parseFloat(cleanValues[7] || "0"),
-      room_type: cleanValues[8] || "",
-      price: isNaN(price) ? 0 : price, // Default to 0 if price is NaN
-      minimum_nights: parseInt(cleanValues[10] || "0"),
-      number_of_reviews: parseInt(cleanValues[11] || "0"),
-      last_review: cleanValues[12] || "",
-      reviews_per_month: reviewsPerMonth,
-      calculated_host_listings_count: parseInt(cleanValues[14] || "0"),
-      availability_365: parseInt(cleanValues[15] || "0"),
-      number_of_reviews_ltm: parseInt(cleanValues[16] || "0"),
-      license: cleanValues[17] || ""
-    };
-  };
-
-  /**
    * Loads data from the CSV file into the internal state
    *
    * @returns {Promise<void>} A promise that resolves when the data has been loaded
@@ -127,16 +44,56 @@ export const createAirBnBDataHandler = async (filePath: string) => {
    */
   const loadData = async (): Promise<void> => {
     try {
-      const content = await readFile(filePath, "utf-8");
-      const rows = content.split("\n");
+      // Using fast-csv to parse the CSV file
+      const listings: Listing[] = [];
 
-      // Skip header row and parse each data row
-      state.allListings = rows
-        .slice(1)
-        .filter((row) => row.trim())
-        .map(parseRow);
+      await new Promise<void>((resolve, reject) => {
+        createReadStream(filePath)
+          .pipe(parse({ headers: true, trim: true }))
+          .on("error", (error) => reject(error))
+          .on("data", (row) => {
+            // Clean price value - remove $ and any non-numeric characters except decimal point
+            const priceStr = row.price ? row.price.replace(/[$,]/g, "") : "0";
+            const price = parseFloat(priceStr);
 
-      state.filteredListings = [...state.allListings];
+            // Parse reviews_per_month, but preserve empty values
+            let reviewsPerMonth: number | null = null;
+            if (row.reviews_per_month && row.reviews_per_month.trim() !== "") {
+              reviewsPerMonth = parseFloat(row.reviews_per_month);
+              if (isNaN(reviewsPerMonth)) {
+                reviewsPerMonth = 0;
+              }
+            }
+
+            const listing: Listing = {
+              id: row.id || "",
+              name: row.name || "",
+              host_id: row.host_id || "",
+              host_name: row.host_name || "",
+              neighbourhood_group: row.neighbourhood_group || "",
+              neighbourhood: row.neighbourhood || "",
+              latitude: parseFloat(row.latitude || "0"),
+              longitude: parseFloat(row.longitude || "0"),
+              room_type: row.room_type || "",
+              price: isNaN(price) ? 0 : price, // Default to 0 if price is NaN
+              minimum_nights: parseInt(row.minimum_nights || "0"),
+              number_of_reviews: parseInt(row.number_of_reviews || "0"),
+              last_review: row.last_review || "",
+              reviews_per_month: reviewsPerMonth,
+              calculated_host_listings_count: parseInt(row.calculated_host_listings_count || "0"),
+              availability_365: parseInt(row.availability_365 || "0"),
+              number_of_reviews_ltm: parseInt(row.number_of_reviews_ltm || "0"),
+              license: row.license || ""
+            };
+
+            listings.push(listing);
+          })
+          .on("end", () => {
+            state.allListings = listings;
+            state.filteredListings = [...listings];
+            resolve();
+          });
+      });
     } catch (error) {
       console.error("Error loading data:", error);
       throw new Error(`Failed to load data from ${filePath}`);
@@ -461,47 +418,26 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       return;
     }
 
-    // Get headers from the first listing
-    const headers = Object.keys(listings[0]);
+    return new Promise<void>((resolve, reject) => {
+      try {
+        const csvStream = format({ headers: true });
+        const writeStream = createWriteStream(filePath);
 
-    // Convert listings to CSV rows - proper CSV escaping
-    const rows = listings.map((listing) => {
-      return headers
-        .map((header) => {
-          const value = listing[header as keyof Listing];
+        writeStream.on("finish", () => resolve());
+        writeStream.on("error", (error) => reject(error));
 
-          // Handle null, undefined, or empty values
-          if (value === null || value === undefined) {
-            return "";
-          }
+        csvStream.pipe(writeStream);
 
-          // Convert value to string
-          const stringValue = String(value);
+        // Write each listing
+        listings.forEach((listing) => {
+          csvStream.write(listing);
+        });
 
-          // If the value contains quotes, commas, or newlines, it needs to be quoted
-          if (
-            // This is giving me too many headaches
-            // eslint-disable-next-line quotes
-            stringValue.includes('"') ||
-            stringValue.includes(",") ||
-            stringValue.includes("\n") ||
-            stringValue.includes("\r")
-          ) {
-            // Escape quotes by doubling them and wrap in quotes - using double quotes for string literals
-            // This is giving me too many headaches
-            // eslint-disable-next-line quotes
-            return `"${stringValue.replace(/"/g, '""')}"`;
-          }
-
-          return stringValue;
-        })
-        .join(",");
+        csvStream.end();
+      } catch (error) {
+        reject(error);
+      }
     });
-
-    // Combine headers and rows with a trailing newline to match original format
-    const csvContent = [headers.join(","), ...rows].join("\n") + "\n";
-
-    await writeFile(filePath, csvContent, "utf-8");
   };
 
   /**
