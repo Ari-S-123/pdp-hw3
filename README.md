@@ -4,7 +4,7 @@ A functional programming application for processing AirBnB listings data. This p
 
 ## TODO
 
-- [x] Add creative addition
+- [x] Add creative addition: Paginated browsing of listings
 - [x] Document AI usage
 - [ ] Add demo video
 
@@ -50,7 +50,7 @@ A functional programming application for processing AirBnB listings data. This p
 - **Interactive command-line interface**
   - User-friendly menu system
   - Guided filtering process
-  - Paginated browsing of filtered listings
+  - Creative Addition: Paginated browsing of listings
 
 ## Setup
 
