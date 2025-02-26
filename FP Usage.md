@@ -15,89 +15,49 @@ Pure functions are functions that:
 **Example from the codebase:**
 
 ```typescript
-// Pure function from airbnb-data-handler.ts
-const parseRow = (row: string): Listing => {
-  // More robust CSV parsing that handles quoted values with commas
-  const values: string[] = [];
-  let currentValue = "";
-  let insideQuotes = false;
-  let i = 0;
-
-  while (i < row.length) {
-    const char = row[i];
-
-    // This is giving me too many headaches
-    // eslint-disable-next-line quotes
-    if (char === '"' && (i === 0 || row[i - 1] !== "\\")) {
-      insideQuotes = !insideQuotes;
-    } else if (char === "," && !insideQuotes) {
-      values.push(currentValue);
-      currentValue = "";
-    } else {
-      currentValue += char;
-    }
-
-    i++;
-  }
-
-  // Add the last value
-  values.push(currentValue);
-
-  // Clean up values - remove surrounding quotes and unescape embedded quotes
-  const cleanValues = values.map((value) => {
-    let cleanValue = value.trim();
-    // If value starts and ends with quotes, remove them
-    // This is giving me too many headaches
-    // eslint-disable-next-line quotes
-    if (cleanValue.startsWith('"') && cleanValue.endsWith('"')) {
-      cleanValue = cleanValue.slice(1, -1);
-    }
-    // Replace double quotes with single quotes - using double quotes for string literals
-    // This is giving me too many headaches
-    // eslint-disable-next-line quotes
-    cleanValue = cleanValue.replace(/""/g, '"');
-    return cleanValue;
-  });
-
+// Pure data transformation function from airbnb-data-handler.ts in the loadData method
+// This is the transformation used in the "on data" event handler that converts
+// a CSV row into a strongly-typed Listing object without side effects
+const createListing = (row: any): Listing => {
   // Clean price value - remove $ and any non-numeric characters except decimal point
-  const priceStr = cleanValues[9] ? cleanValues[9].replace(/[$,]/g, "") : "0";
+  const priceStr = row.price ? row.price.replace(/[$,]/g, "") : "0";
   const price = parseFloat(priceStr);
 
   // Parse reviews_per_month, but preserve empty values
   let reviewsPerMonth: number | null = null;
-  if (cleanValues[13] && cleanValues[13].trim() !== "") {
-    reviewsPerMonth = parseFloat(cleanValues[13]);
+  if (row.reviews_per_month && row.reviews_per_month.trim() !== "") {
+    reviewsPerMonth = parseFloat(row.reviews_per_month);
     if (isNaN(reviewsPerMonth)) {
       reviewsPerMonth = 0;
     }
   }
 
   return {
-    id: cleanValues[0] || "",
-    name: cleanValues[1] || "",
-    host_id: cleanValues[2] || "",
-    host_name: cleanValues[3] || "",
-    neighbourhood_group: cleanValues[4] || "",
-    neighbourhood: cleanValues[5] || "",
-    latitude: parseFloat(cleanValues[6] || "0"),
-    longitude: parseFloat(cleanValues[7] || "0"),
-    room_type: cleanValues[8] || "",
+    id: row.id || "",
+    name: row.name || "",
+    host_id: row.host_id || "",
+    host_name: row.host_name || "",
+    neighbourhood_group: row.neighbourhood_group || "",
+    neighbourhood: row.neighbourhood || "",
+    latitude: parseFloat(row.latitude || "0"),
+    longitude: parseFloat(row.longitude || "0"),
+    room_type: row.room_type || "",
     price: isNaN(price) ? 0 : price, // Default to 0 if price is NaN
-    minimum_nights: parseInt(cleanValues[10] || "0"),
-    number_of_reviews: parseInt(cleanValues[11] || "0"),
-    last_review: cleanValues[12] || "",
+    minimum_nights: parseInt(row.minimum_nights || "0"),
+    number_of_reviews: parseInt(row.number_of_reviews || "0"),
+    last_review: row.last_review || "",
     reviews_per_month: reviewsPerMonth,
-    calculated_host_listings_count: parseInt(cleanValues[14] || "0"),
-    availability_365: parseInt(cleanValues[15] || "0"),
-    number_of_reviews_ltm: parseInt(cleanValues[16] || "0"),
-    license: cleanValues[17] || ""
+    calculated_host_listings_count: parseInt(row.calculated_host_listings_count || "0"),
+    availability_365: parseInt(row.availability_365 || "0"),
+    number_of_reviews_ltm: parseInt(row.number_of_reviews_ltm || "0"),
+    license: row.license || ""
   };
 };
 ```
 
 This function is pure because:
 
-- It always returns the same output for the same input string
+- It always returns the same output for the same input row object
 - It doesn't modify any state outside its scope
 - It has no side effects
 
@@ -113,11 +73,15 @@ High-order functions are functions that:
 ```typescript
 // Using high-order functions like filter, map, and reduce in airbnb-data-handler.ts
 
-// When loading data:
-state.allListings = rows
-  .slice(1)
-  .filter((row) => row.trim())
-  .map(parseRow);
+// When filtering listings:
+state.filteredListings = state.allListings.filter((listing) => {
+  // Filter logic...
+  if (criteria.minPrice !== undefined && listing.price < criteria.minPrice) {
+    return false;
+  }
+  // More filter conditions...
+  return true;
+});
 
 // When computing host rankings:
 const hostCounts = state.filteredListings.reduce<Record<string, { count: number; name: string }>>((acc, listing) => {
@@ -233,31 +197,31 @@ const badFilter = (criteria: FilterCriteria) => {
 };
 ```
 
-### 2. Impure CSV Parsing (Alternative to parseRow)
+### 2. Impure CSV Parsing (Alternative to the createListing example)
 
 ```typescript
 // BAD EXAMPLE - DO NOT USE
 // This breaks purity by using global state and causing side effects
-let lastParsedRow: string = ""; // Global state
+let lastParsedRow: any = null; // Global state
+let totalRowsProcessed = 0; // Another piece of global state
 
-const impureParseRow = (row: string): Listing => {
+const impureCreateListing = (row: any): Listing => {
   // Side effect: logging
-  console.log(`Parsing row: ${row.substring(0, 50)}...`);
+  console.log(`Parsing row: ${JSON.stringify(row).substring(0, 50)}...`);
 
   // Side effect: mutating external state
   lastParsedRow = row;
+  totalRowsProcessed++;
 
   // Direct side effect: writing to file system
-  require("fs").appendFileSync("parsing-log.txt", `Parsed row at ${new Date()}: ${row}\n`);
-
-  const values = row.split(",");
+  require("fs").appendFileSync("parsing-log.txt", `Parsed row at ${new Date()}: ${JSON.stringify(row)}\n`);
 
   // Rest of parsing logic similar to before
   // ...
 
   return {
-    id: values[0] || "",
-    name: values[1] || ""
+    id: row.id || "",
+    name: row.name || ""
     // ...other fields
   };
 };
@@ -269,31 +233,27 @@ const impureParseRow = (row: string): Listing => {
 // BAD EXAMPLE - DO NOT USE
 // Using loops and mutations instead of higher-order functions
 
-// Instead of using filter and map for loading data:
-const badLoadData = async (): Promise<void> => {
-  const content = await readFile(filePath, "utf-8");
-  const rows = content.split("\n");
-
-  // Skip header row
-  const dataRows = rows.slice(1);
-
-  state.allListings = [];
+// Instead of using filter for filtering listings:
+const badFilter = (criteria: FilterCriteria) => {
+  const results = [];
 
   // Mutable approach with loops
-  for (let i = 0; i < dataRows.length; i++) {
-    const row = dataRows[i];
-    if (row.trim()) {
-      const listing = parseRow(row);
-      state.allListings.push(listing);
+  for (let i = 0; i < state.allListings.length; i++) {
+    const listing = state.allListings[i];
+    let includeItem = true;
+
+    if (criteria.minPrice !== undefined && listing.price < criteria.minPrice) {
+      includeItem = false;
+    }
+    // Check other criteria...
+
+    if (includeItem) {
+      results.push(listing);
     }
   }
 
-  state.filteredListings = [];
-
-  // Another mutation with copy loop
-  for (let i = 0; i < state.allListings.length; i++) {
-    state.filteredListings.push(state.allListings[i]);
-  }
+  state.filteredListings = results;
+  // No return for chaining
 };
 
 // Instead of using reduce and method chains for host rankings:

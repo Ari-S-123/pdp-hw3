@@ -6,8 +6,7 @@
   "scripts": {
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
-    "start": "bun run src/index.ts listings.csv",
-    "test": "bun run src/test.ts"
+    "start": "bun run src/index.ts listings.csv"
   },
   "devDependencies": {
     "@types/bun": "latest",
