@@ -8,6 +8,10 @@ A functional programming application for processing AirBnB listings data. This p
 - [x] Document AI usage
 - [ ] Add demo video
 
+## Screenshot
+
+![image](https://github.com/user-attachments/assets/eef1c4b4-d932-47d9-87d2-25396ce7af8e)
+
 ## Features
 
 - **Filter listings** based on multiple criteria:
