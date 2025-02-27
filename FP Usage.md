@@ -45,7 +45,7 @@ Another pure function example:
 // Pure function to format listings in the CLI module
 const formatListing = (listing: Listing, index: number): string => {
   // Format price as currency with 2 decimal places
-  const formattedPrice = isNaN(listing.price) ? "N/A" : `$${listing.price.toFixed(2)}`;
+  const formattedPrice = listing.price === undefined || isNaN(listing.price) ? "N/A" : `$${listing.price.toFixed(2)}`;
 
   return [
     `\n${index}. ${listing.name} (ID: ${listing.id})`,
@@ -143,8 +143,8 @@ const filter = (criteria: FilterCriteria) => {
   state.lastAppliedFilters = { ...criteria };
 
   // Reset statistics and rankings when filtering
-  state.statistics = null;
-  state.hostRankings = null;
+  state.statistics = undefined;
+  state.hostRankings = undefined;
 
   return handler; // Return handler for method chaining
 };
@@ -185,16 +185,16 @@ const getFilteredListings = (): Listing[] => {
   return [...state.filteredListings]; // Return a copy of the array
 };
 
-const getStatistics = (): Statistics | null => {
-  return state.statistics ? { ...state.statistics } : null; // Return a copy of the object
+const getStatistics = (): Statistics | undefined => {
+  return state.statistics ? { ...state.statistics } : undefined; // Return a copy of the object
 };
 
-const getHostRankings = (): HostRanking[] | null => {
-  return state.hostRankings ? [...state.hostRankings] : null; // Return a copy of the array
+const getHostRankings = (): HostRanking[] | undefined => {
+  return state.hostRankings ? [...state.hostRankings] : undefined; // Return a copy of the array
 };
 
-const getLastAppliedFilters = (): FilterCriteria | null => {
-  return state.lastAppliedFilters ? { ...state.lastAppliedFilters } : null; // Return a copy
+const getLastAppliedFilters = (): FilterCriteria | undefined => {
+  return state.lastAppliedFilters ? { ...state.lastAppliedFilters } : undefined; // Return a copy
 };
 
 // When setting applied filters, we make a copy to avoid external mutation
@@ -259,7 +259,7 @@ const impureFormatListing = (listing: Listing, index: number): string => {
 
   // Using global state to determine output
   const formattedPrice = formattingOptions.showPrice
-    ? isNaN(listing.price)
+    ? listing.price === undefined || isNaN(listing.price)
       ? "N/A"
       : `$${listing.price.toFixed(2)}`
     : "Price hidden";
@@ -367,8 +367,8 @@ const badComputeHostRankings = (
 class AirBnBProcessor {
   private allListings: Listing[] = [];
   private filteredListings: Listing[] = [];
-  private statistics: Statistics | null = null;
-  private rankings: HostRanking[] | null = null;
+  private statistics: Statistics | undefined = undefined;
+  private rankings: HostRanking[] | undefined = undefined;
 
   constructor(filePath: string) {
     // Load listings from file
@@ -407,15 +407,15 @@ const badGetFilteredListings = (): Listing[] => {
   return state.filteredListings; // Returning direct reference, not a copy
 };
 
-const badGetStatistics = (): Statistics | null => {
+const badGetStatistics = (): Statistics | undefined => {
   return state.statistics; // Returning direct reference, not a copy
 };
 
-const badGetHostRankings = (): HostRanking[] | null => {
+const badGetHostRankings = (): HostRanking[] | undefined => {
   return state.hostRankings; // Returning direct reference, not a copy
 };
 
-const badGetLastAppliedFilters = (): FilterCriteria | null => {
+const badGetLastAppliedFilters = (): FilterCriteria | undefined => {
   return state.lastAppliedFilters; // Returning direct reference, not a copy
 };
 
