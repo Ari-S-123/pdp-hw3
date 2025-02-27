@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AirBnB Data Processor Documentation</title>
+    <style>
+      :root {
+        --primary-color: #ff5a5f;
+        --secondary-color: #00a699;
+        --text-color: #484848;
+        --light-gray: #f5f5f5;
+        --medium-gray: #ddd;
+        --dark-gray: #767676;
+        --code-bg: #f6f8fa;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: var(--text-color);
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      header {
+        padding: 20px 0;
+        border-bottom: 1px solid var(--medium-gray);
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+      }
+
+      h2 {
+        color: var(--secondary-color);
+        margin: 25px 0 15px 0;
+        padding-bottom: 5px;
+        border-bottom: 1px solid var(--medium-gray);
+      }
+
+      h3 {
+        margin: 20px 0 10px 0;
+      }
+
+      p,
+      ul,
+      ol {
+        margin-bottom: 15px;
+      }
+
+      ul,
+      ol {
+        padding-left: 25px;
+      }
+
+      a {
+        color: var(--secondary-color);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      code {
+        font-family: "Consolas", "Monaco", monospace;
+        background-color: var(--code-bg);
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.9em;
+      }
+
+      pre {
+        background-color: var(--code-bg);
+        padding: 15px;
+        border-radius: 5px;
+        overflow-x: auto;
+        margin: 15px 0;
+      }
+
+      pre code {
+        background-color: transparent;
+        padding: 0;
+      }
+
+      .container {
+        display: flex;
+        flex-wrap: wrap;
+      }
+
+      .sidebar {
+        flex: 0 0 250px;
+        padding: 20px;
+        background-color: var(--light-gray);
+        border-radius: 5px;
+        margin-right: 30px;
+        margin-bottom: 20px;
+        position: sticky;
+        top: 20px;
+        align-self: flex-start;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
+
+      .main-content {
+        flex: 1;
+        min-width: 300px;
+      }
+
+      .sidebar h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: var(--primary-color);
+      }
+
+      .sidebar ul {
+        list-style: none;
+        padding-left: 0;
+      }
+
+      .sidebar li {
+        margin-bottom: 8px;
+      }
+
+      .sidebar .section {
+        margin-bottom: 20px;
+      }
+
+      .sidebar .subsection {
+        padding-left: 15px;
+        margin-top: 5px;
+      }
+
+      .example-header {
+        background-color: var(--secondary-color);
+        color: white;
+        padding: 5px 10px;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+        font-weight: bold;
+      }
+
+      .counter-example-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 5px 10px;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+        font-weight: bold;
+      }
+
+      .example pre {
+        margin-top: 0;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+
+      footer {
+        margin-top: 40px;
+        padding: 20px 0;
+        border-top: 1px solid var(--medium-gray);
+        text-align: center;
+        color: var(--dark-gray);
+      }
+
+      .badge {
+        display: inline-block;
+        background-color: var(--secondary-color);
+        color: white;
+        padding: 3px 7px;
+        border-radius: 3px;
+        font-size: 0.8em;
+        margin-right: 5px;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          flex-direction: column;
+        }
+
+        .sidebar {
+          flex: 1 0 auto;
+          margin-right: 0;
+          margin-bottom: 20px;
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>AirBnB Data Processor Documentation</h1>
+      <p>A functional programming application for processing AirBnB listings data.</p>
+    </header>
+
+    <div class="container">
+      <nav class="sidebar">
+        <h3>Navigation</h3>
+
+        <div class="section">
+          <strong>Project Overview</strong>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#setup">Setup</a></li>
+            <li><a href="#usage">Usage</a></li>
+            <li><a href="#data-source">Data Source</a></li>
+            <li><a href="#cli">Command Line Interface</a></li>
+            <li><a href="#project-structure">Project Structure</a></li>
+            <li><a href="#development">Development</a></li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <strong>Functional Programming</strong>
+          <ul>
+            <li><a href="#fp-concepts">FP Concepts Overview</a></li>
+            <li><a href="#pure-functions">Pure Functions</a></li>
+            <li><a href="#high-order-functions">High-Order Functions</a></li>
+            <li><a href="#function-composition">Function Composition</a></li>
+            <li><a href="#immutability">Immutability</a></li>
+            <li><a href="#counter-examples">Counter-Examples</a></li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <strong>Additional Information</strong>
+          <ul>
+            <li><a href="#documentation">Documentation</a></li>
+            <li><a href="#running-tests">Running Tests</a></li>
+            <li><a href="#ai-usage">AI Usage</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <main class="main-content">
+        <section>
+          <h2 id="features">Features</h2>
+          <ul>
+            <li>
+              <strong>Filter listings</strong> based on multiple criteria:
+              <ul>
+                <li>Listing name (partial text match)</li>
+                <li>Price range (minimum/maximum)</li>
+                <li>Number of reviews (minimum/maximum)</li>
+                <li>Number of reviews in last 12 months (minimum/maximum)</li>
+                <li>Room type (Entire home/apt, Private room, Shared room, Hotel room)</li>
+                <li>Neighbourhood (partial text match)</li>
+                <li>Minimum nights requirement (minimum/maximum values)</li>
+                <li>Availability (minimum/maximum days per year)</li>
+                <li>Host name (partial text match)</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Compute statistics</strong> on filtered listings:
+              <ul>
+                <li>Total count of filtered listings</li>
+                <li>Average price per room type</li>
+                <li>Average number of reviews per listing</li>
+                <li>Average number of reviews in the last 12 months</li>
+                <li>Average minimum nights required for booking</li>
+                <li>Average availability out of 365 days</li>
+                <li>Average reviews per month (non-null values only)</li>
+                <li>Average number of listings per host</li>
+                <li>Median price of all listings</li>
+                <li>Minimum price among listings</li>
+                <li>Maximum price among listings</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Rank hosts</strong> by number of listings
+              <ul>
+                <li>Sort hosts by the number of listings they have</li>
+                <li>Display top hosts with listing counts</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Export results</strong> to file formats:
+              <ul>
+                <li>JSON format (includes listings, statistics, and host rankings)</li>
+                <li>CSV format (includes only the listings data)</li>
+                <li>Includes automatic creation of a descriptive file with applied filters</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Interactive command-line interface</strong>
+              <ul>
+                <li>User-friendly menu system</li>
+                <li>Guided filtering process</li>
+                <li>Creative Addition: Paginated browsing of listings</li>
+              </ul>
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 id="setup">Setup</h2>
+          <ol>
+            <li>Clone repository.</li>
+            <li>Make sure you are using the latest Node LTS version at the time of the last commit [v22.x].</li>
+            <li>Run <code>npm i -g bun</code> to install Bun.</li>
+            <li>Run <code>bun i</code> to install the dependencies.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 id="usage">Usage</h2>
+          <p>The application accepts a CSV file containing AirBnB listings data as input:</p>
+          <pre><code>bun run src/index.ts &lt;path_to_csv_file&gt;</code></pre>
+          <p>To use the provided <code>listings.csv</code> file, run:</p>
+          <pre><code>bun start</code></pre>
+          <p>
+            Exports are located in the <code>exports</code> directory which is created if it doesn't exist and also
+            ignored by git.
+          </p>
+        </section>
+
+        <section>
+          <h2 id="data-source">Data Source</h2>
+          <p>
+            The application is designed to work with CSV data from the
+            <a href="https://insideairbnb.com/get-the-data/" target="_blank" rel="noopener">AirBnB Get the Data page</a
+            >. Download a listings file, unzip it, and provide the path to the unzipped CSV file when running the
+            application.
+          </p>
+        </section>
+
+        <section>
+          <h2 id="cli">Command Line Interface</h2>
+          <p>The application provides an interactive command-line interface with the following options:</p>
+          <ol>
+            <li><strong>Filter listings</strong>: Apply various filter criteria to narrow down listings</li>
+            <li><strong>Compute statistics</strong>: Calculate statistics on the currently filtered listings</li>
+            <li><strong>Rank hosts</strong>: Generate a ranking of hosts by number of listings</li>
+            <li><strong>Export results</strong>: Export the current results to a JSON or CSV file</li>
+            <li>
+              <strong>Display results</strong>: Show paginated view of filtered listings with navigation controls:
+              <ul>
+                <li>Browse through listings with next/previous page options</li>
+                <li>Jump to a specific page</li>
+                <li>View complete listing details</li>
+              </ul>
+            </li>
+            <li><strong>Exit</strong>: Exit the application</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 id="project-structure">Project Structure</h2>
+          <ul>
+            <li>
+              <code>src/airbnb-data-handler.ts</code>: Core module for processing AirBnB data using functional
+              programming
+            </li>
+            <li><code>src/cli.ts</code>: Command-line interface module</li>
+            <li><code>src/index.ts</code>: Main entry point that integrates the modules</li>
+            <li><code>src/test.ts</code>: Test script that demonstrates core functionality</li>
+            <li>
+              <code>src/types/</code>: Directory containing all TypeScript type definitions
+              <ul>
+                <li><code>listing.ts</code>: Type definition for AirBnB listing data</li>
+                <li><code>filter-criteria.ts</code>: Type definition for filter criteria</li>
+                <li><code>statistics.ts</code>: Type definition for computed statistics</li>
+                <li><code>host-ranking.ts</code>: Type definition for host rankings</li>
+                <li><code>data-handler-state.ts</code>: Type definition for internal state</li>
+                <li><code>airbnb-data-handler.ts</code>: Type definition for the data handler</li>
+                <li><code>cli.ts</code>: Type definition for the CLI interface</li>
+                <li><code>index.ts</code>: Exports all types</li>
+              </ul>
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 id="fp-concepts">Functional Programming Concepts Used</h2>
+          <p>This project demonstrates several functional programming concepts:</p>
+          <ul>
+            <li>
+              <strong>Pure Functions</strong>: Functions that always return the same output for the same input and have
+              no side effects
+            </li>
+            <li>
+              <strong>High-Order Functions</strong>: Functions that take functions as arguments or return functions
+              (map, filter, reduce)
+            </li>
+            <li><strong>Function Composition</strong>: Building complex logic by combining simpler functions</li>
+            <li><strong>Method Chaining</strong>: Enabling fluent APIs through function chaining</li>
+            <li><strong>Immutability</strong>: Avoiding direct mutation of data structures</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 id="pure-functions">Pure Functions</h2>
+          <p>Pure functions are functions that:</p>
+          <ul>
+            <li>Given the same input, always return the same output</li>
+            <li>Have no side effects</li>
+            <li>Don't modify external state</li>
+          </ul>
+
+          <div class="example">
+            <div class="example-header">Example: Pagination Calculations</div>
+            <pre><code>// From CLI module - a pure function for pagination calculations
+const calculatePagination = (totalItems: number, pageSize: number, currentPage: number) => {
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const normalizedPage = Math.max(1, Math.min(currentPage, totalPages));
+  const startIndex = (normalizedPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+  return {
+    totalPages,
+    currentPage: normalizedPage,
+    startIndex,
+    endIndex,
+    hasPrevPage: normalizedPage > 1,
+    hasNextPage: normalizedPage < totalPages
+  };
+};</code></pre>
+          </div>
+
+          <p>This function is pure because:</p>
+          <ul>
+            <li>It always returns the same output for the same input parameters</li>
+            <li>It doesn't modify any state outside its scope</li>
+            <li>It has no side effects - it only computes and returns a new value</li>
+          </ul>
+
+          <div class="example">
+            <div class="example-header">Example: Formatting Listings</div>
+            <pre><code>// Pure function to format listings in the CLI module
+const formatListing = (listing: Listing, index: number): string => {
+  // Format price as currency with 2 decimal places
+  const formattedPrice = listing.price === undefined || isNaN(listing.price) ? "N/A" : `$${listing.price.toFixed(2)}`;
+
+  return [
+    `\n${index}. ${listing.name} (ID: ${listing.id})`,
+    `   Host: ${listing.host_name} (ID: ${listing.host_id})`,
+    `   Price: ${formattedPrice}`,
+    `   Room type: ${listing.room_type}`,
+    `   Location: ${listing.neighbourhood}`,
+    `   Minimum nights: ${listing.minimum_nights}`,
+    `   Reviews: ${listing.number_of_reviews}`,
+    `   Reviews in last 12 months: ${listing.number_of_reviews_ltm}`,
+    `   Availability (days/year): ${listing.availability_365}`
+  ].join("\n");
+};</code></pre>
+          </div>
+        </section>
+
+        <section>
+          <h2 id="high-order-functions">High-Order Functions</h2>
+          <p>High-order functions are functions that:</p>
+          <ul>
+            <li>Take one or more functions as arguments</li>
+            <li>Return a function as a result</li>
+          </ul>
+
+          <div class="example">
+            <div class="example-header">Example: Using filter, map, and reduce</div>
+            <pre><code>// Using high-order functions like filter, map, and reduce in airbnb-data-handler.ts
+
+// When filtering listings:
+state.filteredListings = state.allListings.filter((listing) => {
+  // Filter by price
+  if (criteria.minPrice !== undefined && listing.price < criteria.minPrice) {
+    return false;
+  }
+  if (criteria.maxPrice !== undefined && listing.price > criteria.maxPrice) {
+    return false;
+  }
+
+  // Filter by number of reviews
+  if (criteria.minReviews !== undefined && listing.number_of_reviews < criteria.minReviews) {
+    return false;
+  }
+  if (criteria.maxReviews !== undefined && listing.number_of_reviews > criteria.maxReviews) {
+    return false;
+  }
+
+  // Filter by number of reviews in last 12 months
+  if (criteria.minReviewsLtm !== undefined && listing.number_of_reviews_ltm < criteria.minReviewsLtm) {
+    return false;
+  }
+  if (criteria.maxReviewsLtm !== undefined && listing.number_of_reviews_ltm > criteria.maxReviewsLtm) {
+    return false;
+  }
+
+  // More conditions...
+  return true;
+});
+
+// When computing host rankings:
+const hostCounts = state.filteredListings.reduce&lt;Record&lt;string, { count: number; name: string }&gt;&gt;((acc, listing) => {
+  if (!acc[listing.host_id]) {
+    acc[listing.host_id] = { count: 0, name: listing.host_name };
+  }
+  acc[listing.host_id].count += 1;
+  return acc;
+}, {});
+
+// Transform and sort in a chain
+state.hostRankings = Object.entries(hostCounts)
+  .map(([host_id, { count, name }]) => ({
+    host_id,
+    host_name: name,
+    listingCount: count
+  }))
+  .sort((a, b) => b.listingCount - a.listingCount);</code></pre>
+          </div>
+        </section>
+
+        <section>
+          <h2 id="function-composition">Function Composition and Method Chaining</h2>
+          <p>Function composition enables creating new functions by combining existing ones.</p>
+
+          <div class="example">
+            <div class="example-header">Example: Method Chaining</div>
+            <pre><code>// Method chaining in airbnb-data-handler.ts
+// Each method returns the handler object for further chaining
+
+const filter = (criteria: FilterCriteria) => {
+  state.filteredListings = state.allListings.filter((listing) => {
+    // Filter logic...
+    // (Multiple filter conditions checked)
+    return true;
+  });
+
+  // Store the applied filters (make a copy to avoid external mutation)
+  state.lastAppliedFilters = { ...criteria };
+
+  // Reset statistics and rankings when filtering
+  state.statistics = undefined;
+  state.hostRankings = undefined;
+
+  return handler; // Return handler for method chaining
+};
+
+// From test.ts - example of actual method chaining used in the codebase
+console.log(
+  "Filtering listings with price >= 200, reviews >= 20, room type 'Entire home/apt', and maximum minimum nights of 3..."
+);
+dataHandler.filter({
+  minPrice: 200,
+  minReviews: 20,
+  roomType: "Entire home/apt",
+  maxMinimumNights: 3
+});
+console.log(`Filtered listings: ${dataHandler.getFilteredListings().length}`);
+
+// Test computing statistics
+console.log("\nComputing statistics...");
+dataHandler.computeStats();
+console.log("Statistics:", JSON.stringify(dataHandler.getStatistics(), null, 2));
+
+// Test host rankings
+console.log("\nComputing host rankings...");
+dataHandler.computeHostRankings();</code></pre>
+          </div>
+        </section>
+
+        <section>
+          <h2 id="immutability">Immutability</h2>
+          <p>Immutability means that once a data structure is created, it cannot be changed.</p>
+
+          <div class="example">
+            <div class="example-header">Example: Using Immutable Operations</div>
+            <pre><code>// Getter functions return copies rather than references to internal state
+// From airbnb-data-handler.ts
+
+const getFilteredListings = (): Listing[] => {
+  return [...state.filteredListings]; // Return a copy of the array
+};
+
+const getStatistics = (): Statistics | undefined => {
+  return state.statistics ? { ...state.statistics } : undefined; // Return a copy of the object
+};
+
+const getHostRankings = (): HostRanking[] | undefined => {
+  return state.hostRankings ? [...state.hostRankings] : undefined; // Return a copy of the array
+};
+
+const getLastAppliedFilters = (): FilterCriteria | undefined => {
+  return state.lastAppliedFilters ? { ...state.lastAppliedFilters } : undefined; // Return a copy
+};
+
+// When setting applied filters, we make a copy to avoid external mutation
+state.lastAppliedFilters = { ...criteria };</code></pre>
+          </div>
+        </section>
+
+        <section>
+          <h2 id="counter-examples">Counter-Examples: Breaking Functional Programming Principles</h2>
+          <p>The following examples demonstrate anti-patterns that break functional programming principles.</p>
+
+          <h3>1. Mutation of External State (Breaking Purity)</h3>
+          <div class="example">
+            <div class="counter-example-header">BAD EXAMPLE - DO NOT USE</div>
+            <pre><code>// This breaks purity by mutating external state
+// Compare with the pure calculatePagination function
+
+let currentPage = 1; // Global state
+let listings = []; // More global state
+
+const impureCalculatePagination = (totalItems: number, pageSize: number) => {
+  // Using and modifying external state
+  if (currentPage < 1) currentPage = 1;
+
+  // Modify global state as a side effect
+  const totalPages = Math.ceil(totalItems / pageSize);
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  // Log as a side effect
+  console.log(`Showing page ${currentPage} of ${totalPages}`);
+
+  // Modify the global listings array as a side effect
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+  // Return value that depends on global state
+  return {
+    currentPage, // Uses external state
+    startIndex,
+    endIndex
+  };
+};</code></pre>
+          </div>
+
+          <h3>2. Impure Formatting Function</h3>
+          <div class="example">
+            <div class="counter-example-header">BAD EXAMPLE - DO NOT USE</div>
+            <pre><code>// This breaks purity by using global state and causing side effects
+// Compare with the pure formatListing function
+
+let formattedListings = []; // Global state to store formatted listings
+let formattingOptions = { showPrice: true, showReviews: true }; // Global configuration
+
+const impureFormatListing = (listing: Listing, index: number): string => {
+  // Side effect: logging
+  console.log(`Formatting listing: ${listing.id}`);
+
+  // Using global state to determine output
+  const formattedPrice = formattingOptions.showPrice
+    ? listing.price === undefined || isNaN(listing.price)
+      ? "N/A"
+      : `$${listing.price.toFixed(2)}`
+    : "Price hidden";
+
+  const output = `\n${index}. ${listing.name} (ID: ${listing.id})
+   Host: ${listing.host_name} (ID: ${listing.host_id})
+   Price: ${formattedPrice}`;
+
+  // Side effect: modifying global state
+  formattedListings.push(output);
+
+  // Return value, but also had side effects
+  return output;
+};</code></pre>
+          </div>
+
+          <h3>3. Using Loops and Mutations Instead of Higher-Order Functions</h3>
+          <div class="example">
+            <div class="counter-example-header">BAD EXAMPLE - DO NOT USE</div>
+            <pre><code>// Using loops and mutations instead of higher-order functions
+
+// Instead of using filter for filtering listings:
+const badFilter = (allListings: Listing[], criteria: FilterCriteria) => {
+  const filteredListings = [];
+
+  // Imperative approach with loops
+  for (let i = 0; i < allListings.length; i++) {
+    const listing = allListings[i];
+    let shouldInclude = true;
+
+    // Price filter checks
+    if (criteria.minPrice !== undefined && listing.price < criteria.minPrice) {
+      shouldInclude = false;
+    }
+
+    if (shouldInclude && criteria.maxPrice !== undefined && listing.price > criteria.maxPrice) {
+      shouldInclude = false;
+    }
+
+    // Review count checks
+    if (shouldInclude && criteria.minReviews !== undefined && listing.number_of_reviews < criteria.minReviews) {
+      shouldInclude = false;
+    }
+
+    // Add more conditions...
+
+    if (shouldInclude) {
+      filteredListings.push(listing);
+    }
+  }
+
+  return filteredListings;
+};</code></pre>
+          </div>
+
+          <h3>4. Procedural Method Chaining Alternative</h3>
+          <div class="example">
+            <div class="counter-example-header">BAD EXAMPLE - DO NOT USE</div>
+            <pre><code>// Breaking method chaining with procedural approach
+
+class AirBnBProcessor {
+  private allListings: Listing[] = [];
+  private filteredListings: Listing[] = [];
+  private statistics: Statistics | undefined = undefined;
+  private rankings: HostRanking[] | undefined = undefined;
+
+  constructor(filePath: string) {
+    // Load listings from file
+  }
+
+  filter(criteria: FilterCriteria): void {
+    this.filteredListings = this.allListings.filter(/* filter logic */);
+    // No return value for chaining
+  }
+
+  computeStats(): void {
+    // Compute stats logic
+    // No return value for chaining
+  }
+
+  computeHostRankings(): void {
+    // Compute rankings logic
+    // No return value for chaining
+  }
+
+  // Procedural usage (compare with the fluent method chaining in test.ts):
+  // const processor = new AirBnBProcessor("file.csv");
+  // processor.filter({ minPrice: 200 });
+  // processor.computeStats();
+  // processor.computeHostRankings();
+}</code></pre>
+          </div>
+
+          <h3>5. Breaking Immutability by Returning References</h3>
+          <div class="example">
+            <div class="counter-example-header">BAD EXAMPLE - DO NOT USE</div>
+            <pre><code>// Returning references to internal state instead of copies
+
+const badGetFilteredListings = (): Listing[] => {
+  return state.filteredListings; // Returning direct reference, not a copy
+};
+
+const badGetStatistics = (): Statistics | undefined => {
+  return state.statistics; // Returning direct reference, not a copy
+};
+
+const badGetHostRankings = (): HostRanking[] | undefined => {
+  return state.hostRankings; // Returning direct reference, not a copy
+};
+
+const badGetLastAppliedFilters = (): FilterCriteria | undefined => {
+  return state.lastAppliedFilters; // Returning direct reference, not a copy
+};</code></pre>
+          </div>
+
+          <p>These counter-examples demonstrate practices that break functional programming principles by:</p>
+          <ul>
+            <li>Mutating shared state</li>
+            <li>Causing side effects</li>
+            <li>Using imperative instead of declarative approaches</li>
+            <li>Relying on classes and inheritance instead of function composition</li>
+            <li>Mixing concerns that should be separate</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 id="documentation">Documentation</h2>
+          <p>
+            The code is thoroughly documented using comprehensive JSDoc style comments. Each module, function, type, and
+            property has detailed documentation explaining its purpose, parameters, return values, and potential
+            exceptions.
+          </p>
+          <p>Documentation includes:</p>
+          <ul>
+            <li>Module descriptions</li>
+            <li>Function signatures with parameter and return type information</li>
+            <li>Type definitions with property descriptions</li>
+            <li>Private/internal function documentation</li>
+            <li>Usage examples</li>
+          </ul>
+          <p>
+            This documentation provides both developer guidance and enables better IDE support with improved
+            autocompletion, type checking, and inline documentation.
+          </p>
+        </section>
+
+        <section>
+          <h2 id="development">Development</h2>
+          <p>This project uses:</p>
+          <ul>
+            <li><strong>TypeScript</strong>: For static typing</li>
+            <li><strong>Bun</strong>: As the JavaScript/TypeScript runtime</li>
+            <li><strong>ES Modules</strong>: For module system</li>
+            <li><strong>Prettier</strong>: For code formatting</li>
+            <li><strong>ESLint</strong>: For linting</li>
+            <li><strong>Fast-CSV</strong>: For CSV parsing and formatting</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 id="running-tests">Running Tests</h2>
+          <p>A test script is included to demonstrate the functionality:</p>
+          <pre><code>bun run src/test.ts</code></pre>
+          <p>
+            This creates a sample dataset and demonstrates filtering, computing statistics, ranking hosts, and exporting
+            results.
+          </p>
+        </section>
+
+        <section>
+          <h2 id="ai-usage">AI Usage</h2>
+          <p>
+            Cursor Composer in Agent mode with <code>claude-3.7-sonnet-thinking</code> and Tab Autocomplete were used to
+            assist with various aspects of this project:
+          </p>
+          <ol>
+            <li>
+              <strong>Documentation Generation</strong>: AI assisted with creating comprehensive JSDoc comments for
+              functions, types, and modules.
+            </li>
+            <li>
+              <strong>Type Definitions</strong>: AI helped design and implement well-structured TypeScript type
+              definitions for the application.
+            </li>
+            <li>
+              <strong>Code Refactoring</strong>: AI provided suggestions for refactoring code to better adhere to
+              functional programming principles.
+            </li>
+            <li>
+              <strong>Test Creation</strong>: AI helped write the test script that demonstrates the core functionality
+              of the application.
+            </li>
+            <li>
+              <strong>Bug Detection</strong>: AI identified potential logical issues and type mismatches that were fixed
+              during development.
+            </li>
+          </ol>
+          <p>
+            AI assistance was particularly valuable for establishing consistent documentation patterns and ensuring the
+            functional programming paradigm was properly applied throughout the codebase.
+          </p>
+          <p>Some prompts used:</p>
+          <ul>
+            <li>Write a script that I can use to test this application.</li>
+            <li>Update @handleComputeStatistics to show every statistic and not just count and average price.</li>
+            <li>
+              Can you figure out why there is a double input bug in the pagination navigation menu? Can you also help me
+              fix it?
+            </li>
+            <li>
+              Update the import and export functionality in @airbnb-data-handler.ts and @cli.ts to use the fast-csv
+              package.
+            </li>
+            <li>
+              Generate counterexamples that show the opposite/broken principles for the examples of good functional
+              programming principles present in @FP%20Usage.md.
+            </li>
+            <li>
+              Can you update @README.md and @FP%20Usage.md to reflect all the changes we've made to the codebase
+              together today?
+            </li>
+            <li>Can you generate a documentation html file based on the @README.md and also the @FP Usage.md file?</li>
+          </ul>
+          <p>
+            Everything generated by the Agent was manually verified and/or edited to ensure it was correct and worked as
+            expected.
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <p>AirBnB Data Processor Documentation</p>
+      <p>A functional programming application for processing AirBnB listings data, created with TypeScript and Bun</p>
+    </footer>
+
+    <script>
+      // Add smooth scrolling for anchor links
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          e.preventDefault();
+
+          document.querySelector(this.getAttribute("href")).scrollIntoView({
+            behavior: "smooth"
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
