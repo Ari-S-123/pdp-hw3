@@ -202,6 +202,7 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       state.statistics = {
         count: 0,
         averagePricePerRoom: {},
+        averagePrice: 0,
         averageReviews: 0,
         averageReviewsLtm: 0,
         averageMinimumNights: 0,
@@ -269,6 +270,10 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       }
     }
 
+    // Calculate average price across all room types
+    const totalPriceSum = allPrices.reduce((sum, price) => sum + price, 0);
+    const averagePrice = totalPriceSum / allPrices.length;
+
     // Sort prices for median calculation
     allPrices.sort((a, b) => a - b);
 
@@ -286,6 +291,7 @@ export const createAirBnBDataHandler = async (filePath: string) => {
     state.statistics = {
       count,
       averagePricePerRoom: averages,
+      averagePrice,
       averageReviews: sumReviews / count,
       averageReviewsLtm: sumReviewsLtm / count,
       averageMinimumNights: sumMinimumNights / count,

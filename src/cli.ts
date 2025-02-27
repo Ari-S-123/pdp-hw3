@@ -193,6 +193,7 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
 
     // Display price statistics with formatting
     console.log("\n--- Price Statistics ---");
+    console.log(`Average price across all rooms: $${stats.averagePrice.toFixed(2)}`);
     console.log(`Median price: $${stats.medianPrice.toFixed(2)}`);
     console.log(`Minimum price: $${stats.minPrice.toFixed(2)}`);
     console.log(`Maximum price: $${stats.maxPrice.toFixed(2)}`);

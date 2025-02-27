@@ -5,6 +5,7 @@
  * @property {number} count - Total number of listings in the filtered set
  * @property {Object} averagePricePerRoom - Average price for each room type
  * @property {number} averagePricePerRoom[roomType] - Average price for a specific room type
+ * @property {number} averagePrice - Average price across all room types
  * @property {number} averageReviews - Average number of reviews per listing
  * @property {number} averageReviewsLtm - Average number of reviews in the last 12 months
  * @property {number} averageMinimumNights - Average minimum nights required for booking
@@ -18,6 +19,7 @@
 export type Statistics = {
   count: number;
   averagePricePerRoom: Record<string, number>;
+  averagePrice: number;
   averageReviews: number;
   averageReviewsLtm: number;
   averageMinimumNights: number;
