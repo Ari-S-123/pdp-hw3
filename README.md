@@ -6,7 +6,7 @@ A functional programming application for processing AirBnB listings data. This p
 
 - [x] Add creative addition: Paginated browsing of listings
 - [x] Document AI usage
-- [ ] Add demo video
+- [x] Add demo video
 
 ## Screenshot
 
@@ -165,7 +165,7 @@ This creates a sample dataset and demonstrates filtering, computing statistics, 
 
 ## Video
 
-TODO
+[Demo Video Link](https://youtu.be/uueu3eo7l-U)
 
 ## AI Usage
 
