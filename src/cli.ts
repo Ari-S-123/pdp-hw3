@@ -188,6 +188,11 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
       return;
     }
 
+    // Add note about missing values
+    console.log(
+      "Note: All statistics are calculated using only non-missing values. Missing/undefined values are excluded."
+    );
+
     // Display basic information
     console.log(`Number of listings: ${stats.count}`);
 
@@ -484,7 +489,7 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
    */
   const formatListing = (listing: Listing, index: number): string => {
     // Format price as currency with 2 decimal places
-    const formattedPrice = isNaN(listing.price) ? "N/A" : `$${listing.price.toFixed(2)}`;
+    const formattedPrice = listing.price === undefined || isNaN(listing.price) ? "N/A" : `$${listing.price.toFixed(2)}`;
 
     return [
       `\n${index}. ${listing.name} (ID: ${listing.id})`,
