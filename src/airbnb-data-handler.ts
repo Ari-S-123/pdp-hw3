@@ -30,9 +30,9 @@ export const createAirBnBDataHandler = async (filePath: string) => {
   const state: DataHandlerState = {
     allListings: [],
     filteredListings: [],
-    statistics: null,
-    hostRankings: null,
-    lastAppliedFilters: null
+    statistics: undefined,
+    hostRankings: undefined,
+    lastAppliedFilters: undefined
   };
 
   /**
@@ -52,16 +52,85 @@ export const createAirBnBDataHandler = async (filePath: string) => {
           .pipe(parse({ headers: true, trim: true }))
           .on("error", (error) => reject(error))
           .on("data", (row) => {
-            // Clean price value - remove $ and any non-numeric characters except decimal point
-            const priceStr = row.price ? row.price.replace(/[$,]/g, "") : "0";
-            const price = parseFloat(priceStr);
+            // Parse price, preserving undefined for missing values
+            let price: number | undefined = undefined;
+            if (row.price && row.price.trim() !== "") {
+              const priceStr = row.price.replace(/[$,]/g, "");
+              price = parseFloat(priceStr);
+              if (isNaN(price)) {
+                price = undefined;
+              }
+            }
 
-            // Parse reviews_per_month, but preserve empty values
-            let reviewsPerMonth: number | null = null;
+            // Parse reviews_per_month, preserve undefined for missing values
+            let reviewsPerMonth: number | undefined = undefined;
             if (row.reviews_per_month && row.reviews_per_month.trim() !== "") {
               reviewsPerMonth = parseFloat(row.reviews_per_month);
               if (isNaN(reviewsPerMonth)) {
-                reviewsPerMonth = 0;
+                reviewsPerMonth = undefined;
+              }
+            }
+
+            // Parse latitude, preserving undefined for missing values
+            let latitude: number | undefined = undefined;
+            if (row.latitude && row.latitude.trim() !== "") {
+              latitude = parseFloat(row.latitude);
+              if (isNaN(latitude)) {
+                latitude = undefined;
+              }
+            }
+
+            // Parse longitude, preserving undefined for missing values
+            let longitude: number | undefined = undefined;
+            if (row.longitude && row.longitude.trim() !== "") {
+              longitude = parseFloat(row.longitude);
+              if (isNaN(longitude)) {
+                longitude = undefined;
+              }
+            }
+
+            // Parse minimum_nights, preserving undefined for missing values
+            let minimumNights: number | undefined = undefined;
+            if (row.minimum_nights && row.minimum_nights.trim() !== "") {
+              minimumNights = parseInt(row.minimum_nights);
+              if (isNaN(minimumNights)) {
+                minimumNights = undefined;
+              }
+            }
+
+            // Parse number_of_reviews, preserving undefined for missing values
+            let numberOfReviews: number | undefined = undefined;
+            if (row.number_of_reviews && row.number_of_reviews.trim() !== "") {
+              numberOfReviews = parseInt(row.number_of_reviews);
+              if (isNaN(numberOfReviews)) {
+                numberOfReviews = undefined;
+              }
+            }
+
+            // Parse calculated_host_listings_count, preserving undefined for missing values
+            let calculatedHostListingsCount: number | undefined = undefined;
+            if (row.calculated_host_listings_count && row.calculated_host_listings_count.trim() !== "") {
+              calculatedHostListingsCount = parseInt(row.calculated_host_listings_count);
+              if (isNaN(calculatedHostListingsCount)) {
+                calculatedHostListingsCount = undefined;
+              }
+            }
+
+            // Parse availability_365, preserving undefined for missing values
+            let availability365: number | undefined = undefined;
+            if (row.availability_365 && row.availability_365.trim() !== "") {
+              availability365 = parseInt(row.availability_365);
+              if (isNaN(availability365)) {
+                availability365 = undefined;
+              }
+            }
+
+            // Parse number_of_reviews_ltm, preserving undefined for missing values
+            let numberOfReviewsLtm: number | undefined = undefined;
+            if (row.number_of_reviews_ltm && row.number_of_reviews_ltm.trim() !== "") {
+              numberOfReviewsLtm = parseInt(row.number_of_reviews_ltm);
+              if (isNaN(numberOfReviewsLtm)) {
+                numberOfReviewsLtm = undefined;
               }
             }
 
@@ -72,17 +141,17 @@ export const createAirBnBDataHandler = async (filePath: string) => {
               host_name: row.host_name || "",
               neighbourhood_group: row.neighbourhood_group || "",
               neighbourhood: row.neighbourhood || "",
-              latitude: parseFloat(row.latitude || "0"),
-              longitude: parseFloat(row.longitude || "0"),
+              latitude: latitude,
+              longitude: longitude,
               room_type: row.room_type || "",
-              price: isNaN(price) ? 0 : price, // Default to 0 if price is NaN
-              minimum_nights: parseInt(row.minimum_nights || "0"),
-              number_of_reviews: parseInt(row.number_of_reviews || "0"),
+              price: price,
+              minimum_nights: minimumNights,
+              number_of_reviews: numberOfReviews,
               last_review: row.last_review || "",
               reviews_per_month: reviewsPerMonth,
-              calculated_host_listings_count: parseInt(row.calculated_host_listings_count || "0"),
-              availability_365: parseInt(row.availability_365 || "0"),
-              number_of_reviews_ltm: parseInt(row.number_of_reviews_ltm || "0"),
+              calculated_host_listings_count: calculatedHostListingsCount,
+              availability_365: availability365,
+              number_of_reviews_ltm: numberOfReviewsLtm,
               license: row.license || ""
             };
 
@@ -112,26 +181,42 @@ export const createAirBnBDataHandler = async (filePath: string) => {
   const filter = (criteria: FilterCriteria) => {
     state.filteredListings = state.allListings.filter((listing) => {
       // Filter by price
-      if (criteria.minPrice !== undefined && listing.price < criteria.minPrice) {
+      if (criteria.minPrice !== undefined && listing.price !== undefined && listing.price < criteria.minPrice) {
         return false;
       }
-      if (criteria.maxPrice !== undefined && listing.price > criteria.maxPrice) {
+      if (criteria.maxPrice !== undefined && listing.price !== undefined && listing.price > criteria.maxPrice) {
         return false;
       }
 
       // Filter by number of reviews
-      if (criteria.minReviews !== undefined && listing.number_of_reviews < criteria.minReviews) {
+      if (
+        criteria.minReviews !== undefined &&
+        listing.number_of_reviews !== undefined &&
+        listing.number_of_reviews < criteria.minReviews
+      ) {
         return false;
       }
-      if (criteria.maxReviews !== undefined && listing.number_of_reviews > criteria.maxReviews) {
+      if (
+        criteria.maxReviews !== undefined &&
+        listing.number_of_reviews !== undefined &&
+        listing.number_of_reviews > criteria.maxReviews
+      ) {
         return false;
       }
 
       // Filter by number of reviews in last 12 months
-      if (criteria.minReviewsLtm !== undefined && listing.number_of_reviews_ltm < criteria.minReviewsLtm) {
+      if (
+        criteria.minReviewsLtm !== undefined &&
+        listing.number_of_reviews_ltm !== undefined &&
+        listing.number_of_reviews_ltm < criteria.minReviewsLtm
+      ) {
         return false;
       }
-      if (criteria.maxReviewsLtm !== undefined && listing.number_of_reviews_ltm > criteria.maxReviewsLtm) {
+      if (
+        criteria.maxReviewsLtm !== undefined &&
+        listing.number_of_reviews_ltm !== undefined &&
+        listing.number_of_reviews_ltm > criteria.maxReviewsLtm
+      ) {
         return false;
       }
 
@@ -154,18 +239,34 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       }
 
       // Filter by availability
-      if (criteria.minAvailability !== undefined && listing.availability_365 < criteria.minAvailability) {
+      if (
+        criteria.minAvailability !== undefined &&
+        listing.availability_365 !== undefined &&
+        listing.availability_365 < criteria.minAvailability
+      ) {
         return false;
       }
-      if (criteria.maxAvailability !== undefined && listing.availability_365 > criteria.maxAvailability) {
+      if (
+        criteria.maxAvailability !== undefined &&
+        listing.availability_365 !== undefined &&
+        listing.availability_365 > criteria.maxAvailability
+      ) {
         return false;
       }
 
       // Filter by minimum nights
-      if (criteria.minMinimumNights !== undefined && listing.minimum_nights < criteria.minMinimumNights) {
+      if (
+        criteria.minMinimumNights !== undefined &&
+        listing.minimum_nights !== undefined &&
+        listing.minimum_nights < criteria.minMinimumNights
+      ) {
         return false;
       }
-      if (criteria.maxMinimumNights !== undefined && listing.minimum_nights > criteria.maxMinimumNights) {
+      if (
+        criteria.maxMinimumNights !== undefined &&
+        listing.minimum_nights !== undefined &&
+        listing.minimum_nights > criteria.maxMinimumNights
+      ) {
         return false;
       }
 
@@ -184,8 +285,8 @@ export const createAirBnBDataHandler = async (filePath: string) => {
     state.lastAppliedFilters = { ...criteria };
 
     // Reset statistics and rankings when filtering
-    state.statistics = null;
-    state.hostRankings = null;
+    state.statistics = undefined;
+    state.hostRankings = undefined;
 
     return handler; // Return handler for method chaining
   };
@@ -229,33 +330,55 @@ export const createAirBnBDataHandler = async (filePath: string) => {
 
     // Collect numeric values for calculating averages
     let sumReviews = 0;
+    let reviewsCount = 0;
     let sumReviewsLtm = 0;
+    let reviewsLtmCount = 0;
     let sumMinimumNights = 0;
+    let minimumNightsCount = 0;
     let sumAvailability = 0;
+    let availabilityCount = 0;
     let sumReviewsPerMonth = 0;
-    let reviewsPerMonthCount = 0; // Count of non-null reviews_per_month values
+    let reviewsPerMonthCount = 0;
     let sumHostListingsCount = 0;
-    const allPrices: number[] = [];
+    let hostListingsCount = 0;
+    const validPrices: number[] = [];
 
     // Collect prices for each room type and calculate sums for averages
     state.filteredListings.forEach((listing) => {
-      // Collect prices by room type
-      if (validRoomTypes.includes(listing.room_type) && !isNaN(listing.price)) {
+      // Collect prices by room type if price is not undefined
+      if (validRoomTypes.includes(listing.room_type) && listing.price !== undefined && !isNaN(listing.price)) {
         roomTypePrices[listing.room_type].push(listing.price);
+        validPrices.push(listing.price);
       }
 
-      // Collect all prices for median/min/max
-      allPrices.push(listing.price);
+      // Sum values for averages, only counting non-undefined values
+      if (listing.number_of_reviews !== undefined) {
+        sumReviews += listing.number_of_reviews;
+        reviewsCount++;
+      }
 
-      // Sum values for averages
-      sumReviews += listing.number_of_reviews;
-      sumReviewsLtm += listing.number_of_reviews_ltm;
-      sumMinimumNights += listing.minimum_nights;
-      sumAvailability += listing.availability_365;
-      sumHostListingsCount += listing.calculated_host_listings_count;
+      if (listing.number_of_reviews_ltm !== undefined) {
+        sumReviewsLtm += listing.number_of_reviews_ltm;
+        reviewsLtmCount++;
+      }
 
-      // Only count non-null reviews_per_month values
-      if (listing.reviews_per_month !== null) {
+      if (listing.minimum_nights !== undefined) {
+        sumMinimumNights += listing.minimum_nights;
+        minimumNightsCount++;
+      }
+
+      if (listing.availability_365 !== undefined) {
+        sumAvailability += listing.availability_365;
+        availabilityCount++;
+      }
+
+      if (listing.calculated_host_listings_count !== undefined) {
+        sumHostListingsCount += listing.calculated_host_listings_count;
+        hostListingsCount++;
+      }
+
+      // Only count non-undefined reviews_per_month values
+      if (listing.reviews_per_month !== undefined) {
         sumReviewsPerMonth += listing.reviews_per_month;
         reviewsPerMonthCount++;
       }
@@ -270,37 +393,42 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       }
     }
 
-    // Calculate average price across all room types
-    const totalPriceSum = allPrices.reduce((sum, price) => sum + price, 0);
-    const averagePrice = totalPriceSum / allPrices.length;
+    // Calculate average price across all valid prices
+    let averagePrice = 0;
+    if (validPrices.length > 0) {
+      const totalPriceSum = validPrices.reduce((sum, price) => sum + price, 0);
+      averagePrice = totalPriceSum / validPrices.length;
+    }
 
     // Sort prices for median calculation
-    allPrices.sort((a, b) => a - b);
+    validPrices.sort((a, b) => a - b);
 
     // Calculate median price
     let medianPrice = 0;
-    const midIndex = Math.floor(allPrices.length / 2);
-    if (allPrices.length % 2 === 0) {
-      // Even number of prices, average the two middle values
-      medianPrice = (allPrices[midIndex - 1] + allPrices[midIndex]) / 2;
-    } else {
-      // Odd number of prices, take the middle value
-      medianPrice = allPrices[midIndex];
+    if (validPrices.length > 0) {
+      const midIndex = Math.floor(validPrices.length / 2);
+      if (validPrices.length % 2 === 0) {
+        // Even number of prices, average the two middle values
+        medianPrice = (validPrices[midIndex - 1] + validPrices[midIndex]) / 2;
+      } else {
+        // Odd number of prices, take the middle value
+        medianPrice = validPrices[midIndex];
+      }
     }
 
     state.statistics = {
       count,
       averagePricePerRoom: averages,
       averagePrice,
-      averageReviews: sumReviews / count,
-      averageReviewsLtm: sumReviewsLtm / count,
-      averageMinimumNights: sumMinimumNights / count,
-      averageAvailability: sumAvailability / count,
+      averageReviews: reviewsCount > 0 ? sumReviews / reviewsCount : 0,
+      averageReviewsLtm: reviewsLtmCount > 0 ? sumReviewsLtm / reviewsLtmCount : 0,
+      averageMinimumNights: minimumNightsCount > 0 ? sumMinimumNights / minimumNightsCount : 0,
+      averageAvailability: availabilityCount > 0 ? sumAvailability / availabilityCount : 0,
       averageReviewsPerMonth: reviewsPerMonthCount > 0 ? sumReviewsPerMonth / reviewsPerMonthCount : 0,
-      averageHostListingsCount: sumHostListingsCount / count,
+      averageHostListingsCount: hostListingsCount > 0 ? sumHostListingsCount / hostListingsCount : 0,
       medianPrice: medianPrice,
-      minPrice: allPrices.length > 0 ? allPrices[0] : 0,
-      maxPrice: allPrices.length > 0 ? allPrices[allPrices.length - 1] : 0
+      minPrice: validPrices.length > 0 ? validPrices[0] : 0,
+      maxPrice: validPrices.length > 0 ? validPrices[validPrices.length - 1] : 0
     };
 
     return handler; // Return handler for method chaining
@@ -315,6 +443,11 @@ export const createAirBnBDataHandler = async (filePath: string) => {
     // Count listings per host
     const hostCounts = state.filteredListings.reduce<Record<string, { count: number; name: string }>>(
       (acc, listing) => {
+        // Skip listings without a valid host_id
+        if (!listing.host_id) {
+          return acc;
+        }
+
         if (!acc[listing.host_id]) {
           acc[listing.host_id] = { count: 0, name: listing.host_name };
         }
@@ -341,14 +474,14 @@ export const createAirBnBDataHandler = async (filePath: string) => {
    *
    * @param {string} outputPath - Path to the output file
    * @param {string} format - Format of the output file ('json' or 'csv')
-   * @param {FilterCriteria | null} appliedFilters - The filters that were applied to the data
+   * @param {FilterCriteria | undefined} appliedFilters - The filters that were applied to the data
    * @returns {Promise<void>} A promise that resolves when export is complete
    * @throws {Error} If the results could not be exported to the specified file
    */
   const exportResults = async (
     outputPath: string,
     format: "json" | "csv" = "json",
-    appliedFilters: FilterCriteria | null = null
+    appliedFilters: FilterCriteria | undefined = undefined
   ): Promise<void> => {
     try {
       // Create exports directory if it doesn't exist
@@ -364,11 +497,11 @@ export const createAirBnBDataHandler = async (filePath: string) => {
       const exportPath = join(exportsDir, fileName);
 
       // Automatically compute statistics and host rankings if not already computed
-      if (state.statistics === null && format === "json") {
+      if (state.statistics === undefined && format === "json") {
         computeStats();
       }
 
-      if (state.hostRankings === null && format === "json") {
+      if (state.hostRankings === undefined && format === "json") {
         computeHostRankings();
       }
 
@@ -450,14 +583,14 @@ export const createAirBnBDataHandler = async (filePath: string) => {
    * Creates a description file listing all applied filters
    *
    * @param {string} exportPath - Path to the exported data file
-   * @param {FilterCriteria | null} filters - The filters that were applied
+   * @param {FilterCriteria | undefined} filters - The filters that were applied
    * @param {string} format - Format of the exported data
    * @returns {Promise<void>} A promise that resolves when the file is created
    * @private
    */
   const createFilterDescriptionFile = async (
     exportPath: string,
-    filters: FilterCriteria | null,
+    filters: FilterCriteria | undefined,
     format: string
   ): Promise<void> => {
     // Generate the description file path by adding format indicator and changing the extension to .txt
@@ -512,19 +645,19 @@ export const createAirBnBDataHandler = async (filePath: string) => {
   /**
    * Gets the computed statistics
    *
-   * @returns {Statistics | null} A copy of the computed statistics or null if not computed
+   * @returns {Statistics | undefined} A copy of the computed statistics or undefined if not computed
    */
-  const getStatistics = (): Statistics | null => {
-    return state.statistics ? { ...state.statistics } : null;
+  const getStatistics = (): Statistics | undefined => {
+    return state.statistics ? { ...state.statistics } : undefined;
   };
 
   /**
    * Gets the host rankings
    *
-   * @returns {HostRanking[] | null} A copy of the host rankings or null if not computed
+   * @returns {HostRanking[] | undefined} A copy of the host rankings or undefined if not computed
    */
-  const getHostRankings = (): HostRanking[] | null => {
-    return state.hostRankings ? [...state.hostRankings] : null;
+  const getHostRankings = (): HostRanking[] | undefined => {
+    return state.hostRankings ? [...state.hostRankings] : undefined;
   };
 
   /**
@@ -539,10 +672,10 @@ export const createAirBnBDataHandler = async (filePath: string) => {
   /**
    * Gets the last applied filters
    *
-   * @returns {FilterCriteria | null} A copy of the last applied filters or null if no filters applied
+   * @returns {FilterCriteria | undefined} A copy of the last applied filters or undefined if no filters applied
    */
-  const getLastAppliedFilters = (): FilterCriteria | null => {
-    return state.lastAppliedFilters ? { ...state.lastAppliedFilters } : null;
+  const getLastAppliedFilters = (): FilterCriteria | undefined => {
+    return state.lastAppliedFilters ? { ...state.lastAppliedFilters } : undefined;
   };
 
   /**

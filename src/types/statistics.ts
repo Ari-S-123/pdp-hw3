@@ -10,7 +10,7 @@
  * @property {number} averageReviewsLtm - Average number of reviews in the last 12 months
  * @property {number} averageMinimumNights - Average minimum nights required for booking
  * @property {number} averageAvailability - Average availability out of 365 days
- * @property {number} averageReviewsPerMonth - Average reviews per month (non-null values only)
+ * @property {number} averageReviewsPerMonth - Average reviews per month (non-undefined values only)
  * @property {number} averageHostListingsCount - Average number of listings per host
  * @property {number} medianPrice - Median price of all listings
  * @property {number} minPrice - Minimum price among listings

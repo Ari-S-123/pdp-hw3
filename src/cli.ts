@@ -309,9 +309,9 @@ export const createCLI = (dataHandler: AirBnBDataHandler) => {
   /**
    * Gets the currently applied filters
    *
-   * @returns {FilterCriteria | null} The currently applied filters or null if no filters applied
+   * @returns {FilterCriteria | undefined} The currently applied filters or undefined if no filters applied
    */
-  const getCurrentFilters = (): FilterCriteria | null => {
+  const getCurrentFilters = (): FilterCriteria | undefined => {
     // Now we can directly get the last applied filters from the data handler
     return dataHandler.getLastAppliedFilters();
   };

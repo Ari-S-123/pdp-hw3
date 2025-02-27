@@ -12,14 +12,14 @@ import type { FilterCriteria } from "./filter-criteria";
  * @typedef {Object} DataHandlerState
  * @property {Listing[]} allListings - All listings loaded from the data source
  * @property {Listing[]} filteredListings - Subset of listings after applying filters
- * @property {Statistics|null} statistics - Computed statistics or null if not computed
- * @property {HostRanking[]|null} hostRankings - Computed host rankings or null if not computed
- * @property {FilterCriteria|null} lastAppliedFilters - The most recently applied filter criteria or null if no filters applied
+ * @property {Statistics|undefined} statistics - Computed statistics or undefined if not computed
+ * @property {HostRanking[]|undefined} hostRankings - Computed host rankings or undefined if not computed
+ * @property {FilterCriteria|undefined} lastAppliedFilters - The most recently applied filter criteria or undefined if no filters applied
  */
 export type DataHandlerState = {
   allListings: Listing[];
   filteredListings: Listing[];
-  statistics: Statistics | null;
-  hostRankings: HostRanking[] | null;
-  lastAppliedFilters: FilterCriteria | null;
+  statistics: Statistics | undefined;
+  hostRankings: HostRanking[] | undefined;
+  lastAppliedFilters: FilterCriteria | undefined;
 };
